@@ -1,4 +1,34 @@
 {
+  "rewrites": [
+    {
+      "source": "/api/artifacts",
+      "destination": "/api/artifacts.js"
+    },
+    {
+      "source": "/api/build",
+      "destination": "/api/build.js"
+    },
+    {
+      "source": "/api/health",
+      "destination": "/api/health.js"
+    },
+    {
+      "source": "/api/logs",
+      "destination": "/api/logs.js"
+    },
+    {
+      "source": "/api/repos",
+      "destination": "/api/repos.js"
+    },
+    {
+      "source": "/api/runs",
+      "destination": "/api/runs.js"
+    },
+    {
+      "source": "/api/versions",
+      "destination": "/api/versions.js"
+    }
+  ],
   "functions": {
     "api/*.js": {
       "maxDuration": 30
