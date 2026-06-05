@@ -8,7 +8,8 @@ Required production environment variables:
 
 - `GITHUB_TOKEN`: GitHub token with `repo` and `workflow` access.
 - `ALLOWED_ORIGINS`: comma-separated origins, default `https://zey-win.github.io`.
-- `ALLOWED_GAME_REPOS`: comma-separated game repos, default `zey-win/plinko`.
+- `ALLOWED_GAME_REPOS`: optional comma-separated game repos. If empty, the API lists and accepts every repository under `GITHUB_ORG`.
+- `GITHUB_ORG`: default `zey-win`.
 - `CI_REPOSITORY`: default `zey-win/ci-cd`.
 - `CI_WORKFLOW`: default `build-apk.yml`.
 - `CI_REF`: default `main`.

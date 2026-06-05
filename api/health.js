@@ -1,4 +1,4 @@
-const { getAllowedOrigins, getAllowedRepos, handleOptions, sendJson } = require("./_shared");
+const { getAllowedOrigins, getAllowedRepos, getGithubOrg, handleOptions, sendJson } = require("./_shared");
 
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
@@ -8,6 +8,8 @@ module.exports = async function handler(req, res) {
     service: "zeywin-android-builder-api",
     allowedOrigins: getAllowedOrigins(),
     allowedGameRepos: getAllowedRepos(),
+    githubOrg: getGithubOrg(),
+    allOrgReposAllowed: getAllowedRepos().length === 0,
     ciRepository: process.env.CI_REPOSITORY || "zey-win/ci-cd",
     ciWorkflow: process.env.CI_WORKFLOW || "build-apk.yml",
     ciRef: process.env.CI_REF || "main",

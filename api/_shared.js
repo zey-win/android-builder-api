@@ -1,5 +1,5 @@
 const DEFAULT_ALLOWED_ORIGIN = "https://zey-win.github.io";
-const DEFAULT_ALLOWED_REPOS = "zey-win/plinko";
+const DEFAULT_GITHUB_ORG = "zey-win";
 
 function csv(value, fallback) {
   return String(value || fallback || "")
@@ -13,7 +13,11 @@ function getAllowedOrigins() {
 }
 
 function getAllowedRepos() {
-  return csv(process.env.ALLOWED_GAME_REPOS, DEFAULT_ALLOWED_REPOS);
+  return csv(process.env.ALLOWED_GAME_REPOS, "");
+}
+
+function getGithubOrg() {
+  return String(process.env.GITHUB_ORG || DEFAULT_GITHUB_ORG).trim();
 }
 
 function setCors(req, res) {
@@ -70,7 +74,13 @@ function requireToken() {
 }
 
 function isAllowedRepo(repo) {
-  return getAllowedRepos().includes(repo);
+  const allowed = getAllowedRepos();
+  if (allowed.length > 0) {
+    return allowed.includes(repo);
+  }
+
+  const org = getGithubOrg();
+  return repo.startsWith(`${org}/`);
 }
 
 function assertRepo(repo) {
@@ -176,6 +186,7 @@ module.exports = {
   errorPayload,
   getAllowedOrigins,
   getAllowedRepos,
+  getGithubOrg,
   githubFetch,
   handleOptions,
   readJson,
