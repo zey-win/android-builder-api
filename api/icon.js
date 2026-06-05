@@ -1,0 +1,168 @@
+const {
+  assertRepo,
+  assertSimpleRef,
+  errorPayload,
+  githubFetch,
+  handleOptions,
+  requireOperator,
+  safeString,
+  sendJson
+} = require("./_shared");
+
+const PNG_MAGIC = "89504e470d0a1a0a";
+const MAX_PREVIEW_BYTES = 2_500_000;
+const STATIC_ICON_CANDIDATES = [
+  "Assets/ZeyWin/IconOverride/android-icon.png",
+  "Assets/Sprites/Icon.png",
+  "Assets/Sprites/icon.png",
+  "Assets/AppIcon.png",
+  "Assets/app-icon.png",
+  "Assets/app_icon.png",
+  "Assets/LauncherIcon.png",
+  "Assets/launcher-icon.png",
+  "Assets/launcher_icon.png",
+  "Assets/Icons/AppIcon.png",
+  "Assets/Icons/icon.png",
+  "Assets/Resources/AppIcon.png",
+  "Assets/Resources/Icon.png",
+  "Assets/Plugins/Android/res/drawable/icon.png",
+  "Assets/Plugins/Android/res/drawable/app_icon.png",
+  "Assets/Plugins/Android/res/mipmap-hdpi/app_icon.png",
+  "Assets/Plugins/Android/res/mipmap-mdpi/app_icon.png",
+  "Assets/Plugins/Android/res/mipmap-xhdpi/app_icon.png",
+  "Assets/Plugins/Android/res/mipmap-xxhdpi/app_icon.png",
+  "Assets/Plugins/Android/res/mipmap-xxxhdpi/app_icon.png"
+];
+
+function encodeContentPath(path) {
+  return path.split("/").map(encodeURIComponent).join("/");
+}
+
+function normalizePath(value) {
+  const path = safeString(value).replace(/^\.?\//, "");
+  if (!path || path.includes("..") || !/^Assets\/[A-Za-z0-9_./ =()+-]+\.png$/i.test(path)) {
+    return "";
+  }
+  return path;
+}
+
+function isPng(buffer) {
+  return buffer.length >= 8 && buffer.subarray(0, 8).toString("hex") === PNG_MAGIC;
+}
+
+function scoreIconPath(path) {
+  const lower = path.toLowerCase();
+  let score = 0;
+  if (lower === "assets/zeywin/iconoverride/android-icon.png") score += 200;
+  if (lower === "assets/sprites/icon.png") score += 180;
+  if (lower.includes("/appicon")) score += 120;
+  if (lower.includes("/app_icon") || lower.includes("/app-icon")) score += 120;
+  if (lower.includes("/launcher")) score += 110;
+  if (/\/icon\.png$/.test(lower)) score += 100;
+  if (lower.includes("/icons/")) score += 30;
+  if (lower.includes("/sprites/")) score += 25;
+  if (lower.includes("/plugins/android/res/")) score += 20;
+  if (lower.includes("textmesh pro/")) score -= 140;
+  if (lower.includes("/editor/")) score -= 120;
+  if (lower.includes("/loading/")) score -= 50;
+  if (lower.includes("ad_icon")) score -= 100;
+  return score;
+}
+
+function dedupe(values) {
+  return [...new Set(values.filter(Boolean))];
+}
+
+async function readPngContent(repo, ref, path) {
+  const encodedPath = encodeContentPath(path);
+  const file = await githubFetch(`/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`);
+  if (Array.isArray(file) || file.type !== "file" || !file.content) {
+    return null;
+  }
+
+  const base64 = String(file.content || "").replace(/\s/g, "");
+  const buffer = Buffer.from(base64, "base64");
+  if (!isPng(buffer) || buffer.length > MAX_PREVIEW_BYTES) {
+    return null;
+  }
+
+  return {
+    path,
+    sha: file.sha || "",
+    size: buffer.length,
+    htmlUrl: file.html_url || "",
+    dataUrl: `data:image/png;base64,${base64}`
+  };
+}
+
+async function listScoredTreeCandidates(repo, ref) {
+  try {
+    const tree = await githubFetch(`/repos/${repo}/git/trees/${encodeURIComponent(ref)}?recursive=1`);
+    return (tree.tree || [])
+      .filter((entry) => entry.type === "blob" && /\.png$/i.test(entry.path || "") && /^Assets\//.test(entry.path || ""))
+      .map((entry) => entry.path)
+      .map((path) => ({ path, score: scoreIconPath(path) }))
+      .filter((item) => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 18)
+      .map((item) => item.path);
+  } catch (error) {
+    if (error.statusCode === 404) {
+      return [];
+    }
+    throw error;
+  }
+}
+
+async function findIcon(repo, ref, explicitPath) {
+  const candidates = dedupe([
+    normalizePath(explicitPath),
+    ...STATIC_ICON_CANDIDATES,
+    ...(await listScoredTreeCandidates(repo, ref))
+  ]);
+
+  for (const path of candidates) {
+    try {
+      const icon = await readPngContent(repo, ref, path);
+      if (icon) {
+        return icon;
+      }
+    } catch (error) {
+      if (error.statusCode !== 404) {
+        throw error;
+      }
+    }
+  }
+
+  return null;
+}
+
+module.exports = async function handler(req, res) {
+  if (handleOptions(req, res)) return;
+
+  try {
+    if (req.method !== "GET") {
+      sendJson(req, res, 405, { ok: false, error: "Method not allowed." });
+      return;
+    }
+
+    requireOperator(req);
+
+    const repo = safeString(req.query?.game_repository || req.query?.repository);
+    const ref = safeString(req.query?.game_ref || req.query?.ref, "main");
+    const explicitPath = safeString(req.query?.icon_path);
+    assertRepo(repo);
+    assertSimpleRef(ref);
+
+    const icon = await findIcon(repo, ref, explicitPath);
+    sendJson(req, res, 200, {
+      ok: true,
+      repository: repo,
+      ref,
+      found: Boolean(icon),
+      icon
+    });
+  } catch (error) {
+    sendJson(req, res, error.statusCode || 500, errorPayload(error));
+  }
+};

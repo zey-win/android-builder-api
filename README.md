@@ -2,7 +2,7 @@
 
 Dedicated Vercel backend for `https://zey-win.github.io/` Android build form.
 
-It accepts form payloads from GitHub Pages, optionally commits a selected PNG icon into an allowed Unity game repository, auto-fills the next AAB version from `zey-win/ci-cd`, then dispatches GitHub Actions.
+It accepts form payloads from GitHub Pages, previews the current app icon from an allowed Unity game repository, optionally commits a selected PNG icon override, auto-fills the next AAB version from `zey-win/ci-cd`, then dispatches GitHub Actions.
 
 Required production environment variables:
 
