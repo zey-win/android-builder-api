@@ -109,6 +109,8 @@ async function commitIcon({ repo, branch, iconPath, iconBuffer }) {
 }
 
 function buildWorkflowInputs(payload, iconPath) {
+  const buildFormat = safeString(payload.build_format, "apk");
+  const normalizedBuildFormat = ["apk", "aab", "apk_aab"].includes(buildFormat) ? buildFormat : "apk";
   const inputs = {
     builder_request_id: safeString(payload.builder_request_id),
     game_repository: safeString(payload.game_repository),
@@ -120,7 +122,7 @@ function buildWorkflowInputs(payload, iconPath) {
     version_mode: safeString(payload.version_mode, "auto_next"),
     version_name: safeString(payload.version_name),
     version_code: safeString(payload.version_code),
-    build_format: safeString(payload.build_format, "apk") === "aab" ? "aab" : "apk",
+    build_format: normalizedBuildFormat,
     publish_to_google_play: "false",
     google_play_track: "production",
     google_play_status: "completed",
@@ -218,8 +220,12 @@ async function getLatestArtifact(packageName) {
       versionCode: meta.version_code || "",
       buildFormat: meta.build_format || "",
       releaseUrl: meta.github_release || meta.apk_release || "",
-      assetName: meta.apk_asset || "",
-      repoPath: meta.package_repo_path || meta.apk_path || "",
+      assetName: meta.package_assets || meta.aab_asset || meta.apk_asset || "",
+      repoPath: meta.package_repo_paths || meta.aab_path || meta.apk_path || meta.package_repo_path || "",
+      apkAsset: meta.apk_asset || "",
+      apkPath: meta.apk_path || "",
+      aabAsset: meta.aab_asset || "",
+      aabPath: meta.aab_path || "",
       builtAt: meta.built_at_utc || ""
     };
   } catch (error) {

@@ -1,7 +1,7 @@
 const fs = require("node:fs");
 const path = require("node:path");
 
-for (const file of ["api/_shared.js", "api/health.js", "api/repos.js", "api/build.js", "api/runs.js", "api/logs.js", "api/artifacts.js"]) {
+for (const file of ["api/_shared.js", "api/health.js", "api/repos.js", "api/build.js", "api/runs.js", "api/logs.js", "api/artifacts.js", "api/versions.js"]) {
   const fullPath = path.join(process.cwd(), file);
   require(fullPath);
   console.log(`ok ${file}`);

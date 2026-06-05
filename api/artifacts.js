@@ -55,6 +55,7 @@ module.exports = async function handler(req, res) {
     const versionCode = Number(meta.version_code || 0);
     const ready = versionCode > 0 && versionCode >= minVersionCode;
     const format = (meta.build_format || "apk").toLowerCase();
+    const type = format === "apk_aab" ? "APK+AAB" : format === "aab" ? "AAB" : "APK";
 
     sendJson(req, res, 200, {
       ok: true,
@@ -62,12 +63,16 @@ module.exports = async function handler(req, res) {
       packageName,
       artifact: ready
         ? {
-            type: format === "aab" ? "AAB" : "APK",
+            type,
             versionName: meta.version_name || "",
             versionCode: meta.version_code || "",
             releaseUrl: meta.github_release || meta.apk_release || "",
-            assetName: meta.apk_asset || "",
-            repoPath: meta.package_repo_path || meta.apk_path || "",
+            assetName: meta.package_assets || meta.aab_asset || meta.apk_asset || "",
+            repoPath: meta.package_repo_paths || meta.aab_path || meta.apk_path || meta.package_repo_path || "",
+            apkAsset: meta.apk_asset || "",
+            apkPath: meta.apk_path || "",
+            aabAsset: meta.aab_asset || "",
+            aabPath: meta.aab_path || "",
             builtAt: meta.built_at_utc || ""
           }
         : null
