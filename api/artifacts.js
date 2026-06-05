@@ -1,23 +1,13 @@
 const {
+  buildReleaseAssetLinks,
   errorPayload,
   githubFetch,
   handleOptions,
+  parseKeyValueText,
   requireOperator,
   safeString,
   sendJson
 } = require("./_shared");
-
-function parseBuildTxt(text) {
-  return Object.fromEntries(
-    String(text || "")
-      .split(/\r?\n/)
-      .filter((line) => line.includes("="))
-      .map((line) => {
-        const index = line.indexOf("=");
-        return [line.slice(0, index), line.slice(index + 1)];
-      })
-  );
-}
 
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
@@ -51,11 +41,14 @@ module.exports = async function handler(req, res) {
       throw error;
     }
 
-    const meta = parseBuildTxt(Buffer.from(file.content || "", "base64").toString("utf8"));
+    const meta = parseKeyValueText(Buffer.from(file.content || "", "base64").toString("utf8"));
     const versionCode = Number(meta.version_code || 0);
     const ready = versionCode > 0 && versionCode >= minVersionCode;
     const format = (meta.build_format || "apk").toLowerCase();
     const type = format === "apk_aab" ? "APK+AAB" : format === "aab" ? "AAB" : "APK";
+    const assets = buildReleaseAssetLinks(meta);
+    const apkDownload = assets.find((asset) => asset.type === "APK")?.downloadUrl || "";
+    const aabDownload = assets.find((asset) => asset.type === "AAB")?.downloadUrl || "";
 
     sendJson(req, res, 200, {
       ok: true,
@@ -68,6 +61,10 @@ module.exports = async function handler(req, res) {
             versionCode: meta.version_code || "",
             releaseUrl: meta.github_release || meta.apk_release || "",
             assetName: meta.package_assets || meta.aab_asset || meta.apk_asset || "",
+            assets,
+            downloadUrl: assets[0]?.downloadUrl || "",
+            apkDownloadUrl: apkDownload,
+            aabDownloadUrl: aabDownload,
             repoPath: meta.package_repo_paths || meta.aab_path || meta.apk_path || meta.package_repo_path || "",
             apkAsset: meta.apk_asset || "",
             apkPath: meta.apk_path || "",

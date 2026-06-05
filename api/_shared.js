@@ -133,6 +133,74 @@ function safeString(value, fallback = "") {
   return String(value ?? fallback).trim();
 }
 
+function parseKeyValueText(text) {
+  return Object.fromEntries(
+    String(text || "")
+      .split(/\r?\n/)
+      .filter((line) => line.includes("="))
+      .map((line) => {
+        const index = line.indexOf("=");
+        return [line.slice(0, index), line.slice(index + 1)];
+      })
+  );
+}
+
+function splitCsv(value) {
+  return String(value || "")
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
+}
+
+function releaseDownloadUrl(releaseUrl, assetName) {
+  const name = safeString(assetName);
+  const url = safeString(releaseUrl);
+  if (!name || !url) return "";
+
+  try {
+    const parsed = new URL(url);
+    const parts = parsed.pathname.split("/").filter(Boolean);
+    const releaseIndex = parts.findIndex((part, index) => part === "releases" && parts[index + 1] === "tag");
+    const tag = releaseIndex >= 0 ? parts[releaseIndex + 2] : "";
+    const owner = parts[0] || "";
+    const repo = parts[1] || "";
+    if (!owner || !repo || !tag) return "";
+
+    return `${parsed.origin}/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/releases/download/${encodeURIComponent(tag)}/${name
+      .split("/")
+      .map(encodeURIComponent)
+      .join("/")}`;
+  } catch {
+    return "";
+  }
+}
+
+function buildReleaseAssetLinks(meta) {
+  const releaseUrl = meta.github_release || meta.apk_release || "";
+  const candidates = [
+    ...splitCsv(meta.package_assets).map((name) => ({ name })),
+    { name: meta.apk_asset, type: "APK" },
+    { name: meta.aab_asset, type: "AAB" }
+  ];
+  const seen = new Set();
+
+  return candidates
+    .map((candidate) => {
+      const name = safeString(candidate.name);
+      if (!name || seen.has(name)) return null;
+      seen.add(name);
+
+      const lower = name.toLowerCase();
+      const type = candidate.type || (lower.endsWith(".aab") ? "AAB" : lower.endsWith(".apk") ? "APK" : "Android");
+      return {
+        type,
+        name,
+        downloadUrl: releaseDownloadUrl(releaseUrl, name)
+      };
+    })
+    .filter((asset) => asset && asset.downloadUrl);
+}
+
 function githubHeaders(token) {
   return {
     "Accept": "application/vnd.github+json",
@@ -183,12 +251,14 @@ function errorPayload(error) {
 module.exports = {
   assertRepo,
   assertSimpleRef,
+  buildReleaseAssetLinks,
   errorPayload,
   getAllowedOrigins,
   getAllowedRepos,
   getGithubOrg,
   githubFetch,
   handleOptions,
+  parseKeyValueText,
   readJson,
   requireOperator,
   safeString,

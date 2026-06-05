@@ -2,22 +2,11 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
+  parseKeyValueText,
   requireOperator,
   safeString,
   sendJson
 } = require("./_shared");
-
-function parseBuildTxt(text) {
-  return Object.fromEntries(
-    String(text || "")
-      .split(/\r?\n/)
-      .filter((line) => line.includes("="))
-      .map((line) => {
-        const index = line.indexOf("=");
-        return [line.slice(0, index), line.slice(index + 1)];
-      })
-  );
-}
 
 function nextVersionName(latestName, latestCode) {
   const name = safeString(latestName);
@@ -30,7 +19,7 @@ function nextVersionName(latestName, latestCode) {
 
 async function readBuildTxt(ciRepository, path) {
   const file = await githubFetch(`/repos/${ciRepository}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}?ref=main`);
-  return parseBuildTxt(Buffer.from(file.content || "", "base64").toString("utf8"));
+  return parseKeyValueText(Buffer.from(file.content || "", "base64").toString("utf8"));
 }
 
 async function findLatestBuild(ciRepository, packageName) {

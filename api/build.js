@@ -1,9 +1,11 @@
 const {
   assertRepo,
   assertSimpleRef,
+  buildReleaseAssetLinks,
   errorPayload,
   githubFetch,
   handleOptions,
+  parseKeyValueText,
   readJson,
   requireOperator,
   safeString,
@@ -207,15 +209,11 @@ async function getLatestArtifact(packageName) {
   try {
     const file = await githubFetch(`/repos/${ciRepository}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}?ref=main`);
     const text = Buffer.from(file.content || "", "base64").toString("utf8");
-    const meta = Object.fromEntries(
-      text
-        .split(/\r?\n/)
-        .filter((line) => line.includes("="))
-        .map((line) => {
-          const index = line.indexOf("=");
-          return [line.slice(0, index), line.slice(index + 1)];
-        })
-    );
+    const meta = parseKeyValueText(text);
+    const assets = buildReleaseAssetLinks(meta);
+    const apkDownload = assets.find((asset) => asset.type === "APK")?.downloadUrl || "";
+    const aabDownload = assets.find((asset) => asset.type === "AAB")?.downloadUrl || "";
+
     return {
       packageName,
       versionName: meta.version_name || "",
@@ -223,6 +221,10 @@ async function getLatestArtifact(packageName) {
       buildFormat: meta.build_format || "",
       releaseUrl: meta.github_release || meta.apk_release || "",
       assetName: meta.package_assets || meta.aab_asset || meta.apk_asset || "",
+      assets,
+      downloadUrl: assets[0]?.downloadUrl || "",
+      apkDownloadUrl: apkDownload,
+      aabDownloadUrl: aabDownload,
       repoPath: meta.package_repo_paths || meta.aab_path || meta.apk_path || meta.package_repo_path || "",
       apkAsset: meta.apk_asset || "",
       apkPath: meta.apk_path || "",
