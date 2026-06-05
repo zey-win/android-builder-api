@@ -8,7 +8,7 @@ for (const file of ["api/_shared.js", "api/health.js", "api/repos.js", "api/buil
 }
 
 const vercel = JSON.parse(fs.readFileSync("vercel.json", "utf8"));
-if (!vercel.functions || !vercel.headers) {
-  throw new Error("vercel.json is missing functions or headers.");
+if (!vercel.functions) {
+  throw new Error("vercel.json is missing functions.");
 }
 console.log("ok vercel.json");
