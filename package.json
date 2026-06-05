@@ -8,6 +8,6 @@
     "check": "node scripts/check.js"
   },
   "engines": {
-    "node": ">=20"
+    "node": "22.x"
   }
 }
