@@ -13,6 +13,7 @@ const {
 const PNG_MAGIC = "89504e470d0a1a0a";
 const DEFAULT_ICON_PATH = "Assets/ZeyWin/IconOverride/android-icon.png";
 const WORKFLOW_INPUT_KEYS = [
+  "builder_request_id",
   "game_repository",
   "game_ref",
   "package_name",
@@ -109,6 +110,7 @@ async function commitIcon({ repo, branch, iconPath, iconBuffer }) {
 
 function buildWorkflowInputs(payload, iconPath) {
   const inputs = {
+    builder_request_id: safeString(payload.builder_request_id),
     game_repository: safeString(payload.game_repository),
     game_ref: safeString(payload.game_ref, "main"),
     package_name: safeString(payload.package_name),
@@ -118,7 +120,7 @@ function buildWorkflowInputs(payload, iconPath) {
     version_mode: safeString(payload.version_mode, "auto_next"),
     version_name: safeString(payload.version_name),
     version_code: safeString(payload.version_code),
-    build_format: "apk",
+    build_format: safeString(payload.build_format, "apk") === "aab" ? "aab" : "apk",
     publish_to_google_play: "false",
     google_play_track: "production",
     google_play_status: "completed",
@@ -133,6 +135,10 @@ function buildWorkflowInputs(payload, iconPath) {
   };
 
   return Object.fromEntries(WORKFLOW_INPUT_KEYS.map((key) => [key, inputs[key] || ""]));
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function dispatchWorkflow(inputs) {
@@ -155,6 +161,75 @@ async function dispatchWorkflow(inputs) {
   };
 }
 
+async function findWorkflowRun({ requestId, createdAfter }) {
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
+  const createdAt = new Date(createdAfter.getTime() - 15_000);
+
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const data = await githubFetch(
+      `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=20`
+    );
+
+    const run = (data.workflow_runs || []).find((item) => {
+      const itemDate = new Date(item.created_at || 0);
+      const title = `${item.display_title || ""} ${item.name || ""}`;
+      return itemDate >= createdAt && title.includes(requestId);
+    });
+
+    if (run) {
+      return {
+        id: run.id,
+        runNumber: run.run_number,
+        runAttempt: run.run_attempt,
+        status: run.status,
+        conclusion: run.conclusion,
+        createdAt: run.created_at,
+        updatedAt: run.updated_at,
+        htmlUrl: run.html_url,
+        displayTitle: run.display_title || run.name
+      };
+    }
+
+    await sleep(1200);
+  }
+
+  return null;
+}
+
+async function getLatestArtifact(packageName) {
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const path = `builds/${packageName}/latest-build.txt`;
+  try {
+    const file = await githubFetch(`/repos/${ciRepository}/contents/${encodeURIComponent(path).replaceAll("%2F", "/")}?ref=main`);
+    const text = Buffer.from(file.content || "", "base64").toString("utf8");
+    const meta = Object.fromEntries(
+      text
+        .split(/\r?\n/)
+        .filter((line) => line.includes("="))
+        .map((line) => {
+          const index = line.indexOf("=");
+          return [line.slice(0, index), line.slice(index + 1)];
+        })
+    );
+    return {
+      packageName,
+      versionName: meta.version_name || "",
+      versionCode: meta.version_code || "",
+      buildFormat: meta.build_format || "",
+      releaseUrl: meta.github_release || meta.apk_release || "",
+      assetName: meta.apk_asset || "",
+      repoPath: meta.package_repo_path || meta.apk_path || "",
+      builtAt: meta.built_at_utc || ""
+    };
+  } catch (error) {
+    if (error.statusCode === 404) {
+      return null;
+    }
+    throw error;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -169,6 +244,7 @@ module.exports = async function handler(req, res) {
     const payload = await readJson(req);
     const gameRepository = safeString(payload.game_repository);
     const gameRef = safeString(payload.game_ref, "main");
+    const requestId = safeString(payload.builder_request_id, `builder-${Date.now().toString(36)}`);
     assertRepo(gameRepository);
     assertSimpleRef(gameRef);
 
@@ -189,20 +265,26 @@ module.exports = async function handler(req, res) {
     const inputs = buildWorkflowInputs(
       {
         ...payload,
+        builder_request_id: requestId,
         game_repository: gameRepository,
         game_ref: gameRef
       },
       iconResult?.path || iconPath
     );
 
+    const dispatchStartedAt = new Date();
     const dispatch = await dispatchWorkflow(inputs);
+    const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt });
 
     sendJson(req, res, 200, {
       ok: true,
+      requestId,
       dispatchedAt: new Date().toISOString(),
       expectedSeconds: 600,
       icon: iconResult,
       workflow: dispatch,
+      run,
+      latestArtifact: await getLatestArtifact(inputs.package_name),
       inputs: {
         ...inputs,
         zeywin_api_key: inputs.zeywin_api_key ? "masked" : "",
