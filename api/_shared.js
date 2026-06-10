@@ -1,5 +1,15 @@
 const DEFAULT_ALLOWED_ORIGIN = "https://zey-win.github.io";
 const DEFAULT_GITHUB_ORG = "zey-win";
+const DEFAULT_GAME_REPOS = [
+  "zey-win/plinko",
+  "zey-win/SlotSpot",
+  "zey-win/Unstopable",
+  "zey-win/wheel-of-fortune",
+  "zey-win/blackjack",
+  "zey-win/baccarat-tiger",
+  "zey-win/roulette",
+  "zey-win/dragon-tiger"
+];
 
 function csv(value, fallback) {
   return String(value || fallback || "")
@@ -13,7 +23,8 @@ function getAllowedOrigins() {
 }
 
 function getAllowedRepos() {
-  return csv(process.env.ALLOWED_GAME_REPOS, "");
+  const configured = csv(process.env.ALLOWED_GAME_REPOS, "");
+  return configured.length ? [...new Set([...DEFAULT_GAME_REPOS, ...configured])] : DEFAULT_GAME_REPOS;
 }
 
 function getGithubOrg() {

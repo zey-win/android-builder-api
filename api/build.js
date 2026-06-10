@@ -14,6 +14,10 @@ const {
 
 const PNG_MAGIC = "89504e470d0a1a0a";
 const DEFAULT_ICON_PATH = "Assets/ZeyWin/IconOverride/android-icon.png";
+const FIREBASE_PATHS = {
+  "google-services.json": "Assets/Plugins/Android/google-services.json",
+  "google-services-desktop.json": "Assets/google-services-desktop.json"
+};
 const WORKFLOW_INPUT_KEYS = [
   "builder_request_id",
   "game_repository",
@@ -71,6 +75,43 @@ function normalizeIconPath(value) {
   return path;
 }
 
+function normalizeFirebaseFile(payload) {
+  const raw = safeString(payload.firebase_json_base64 || payload.firebaseJsonBase64);
+  if (!raw) return null;
+
+  const fileName = safeString(payload.firebase_file_name || payload.firebaseFileName || "google-services.json");
+  const targetName = fileName.toLowerCase().includes("desktop")
+    ? "google-services-desktop.json"
+    : "google-services.json";
+  const targetPath = FIREBASE_PATHS[targetName];
+  const base64 = raw.includes(",") ? raw.split(",").pop() : raw;
+  const buffer = Buffer.from(base64, "base64");
+  if (buffer.length > 1_000_000) {
+    const error = new Error("Firebase config is too large.");
+    error.statusCode = 413;
+    throw error;
+  }
+
+  let parsed = null;
+  try {
+    parsed = JSON.parse(buffer.toString("utf8"));
+  } catch {
+    const error = new Error("Firebase config must be valid JSON.");
+    error.statusCode = 400;
+    throw error;
+  }
+
+  const pretty = Buffer.from(`${JSON.stringify(parsed, null, 2)}\n`, "utf8");
+  return {
+    path: targetPath,
+    name: targetName,
+    buffer: pretty,
+    projectId: parsed.project_info?.project_id || "",
+    packageName: parsed.client?.[0]?.client_info?.android_client_info?.package_name || "",
+    appId: parsed.client?.[0]?.client_info?.mobilesdk_app_id || ""
+  };
+}
+
 function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
@@ -106,6 +147,42 @@ async function commitIcon({ repo, branch, iconPath, iconBuffer }) {
 
   return {
     path: iconPath,
+    commitSha: result.commit?.sha || null,
+    htmlUrl: result.content?.html_url || null
+  };
+}
+
+async function commitFile({ repo, branch, filePath, buffer, message }) {
+  const encodedPath = encodeContentPath(filePath);
+  let existingSha = null;
+
+  try {
+    const existing = await githubFetch(`/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`);
+    existingSha = existing.sha || null;
+  } catch (error) {
+    if (error.statusCode !== 404) {
+      throw error;
+    }
+  }
+
+  const body = {
+    message,
+    content: buffer.toString("base64"),
+    branch
+  };
+
+  if (existingSha) {
+    body.sha = existingSha;
+  }
+
+  const result = await githubFetch(`/repos/${repo}/contents/${encodedPath}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  return {
+    path: filePath,
     commitSha: result.commit?.sha || null,
     htmlUrl: result.content?.html_url || null
   };
@@ -259,7 +336,9 @@ module.exports = async function handler(req, res) {
     assertSimpleRef(gameRef);
 
     const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl);
+    const firebaseFile = normalizeFirebaseFile(payload);
     let iconResult = null;
+    let firebaseResult = null;
     let iconPath = safeString(payload.icon_png_path);
 
     if (iconBuffer) {
@@ -269,6 +348,16 @@ module.exports = async function handler(req, res) {
         branch: gameRef,
         iconPath,
         iconBuffer
+      });
+    }
+
+    if (firebaseFile) {
+      firebaseResult = await commitFile({
+        repo: gameRepository,
+        branch: gameRef,
+        filePath: firebaseFile.path,
+        buffer: firebaseFile.buffer,
+        message: `Update Android builder Firebase config (${firebaseFile.name})`
       });
     }
 
@@ -292,6 +381,12 @@ module.exports = async function handler(req, res) {
       dispatchedAt: new Date().toISOString(),
       expectedSeconds: 600,
       icon: iconResult,
+      firebase: firebaseResult ? {
+        ...firebaseResult,
+        projectId: firebaseFile.projectId,
+        packageName: firebaseFile.packageName,
+        appId: firebaseFile.appId
+      } : null,
       workflow: dispatch,
       run,
       latestArtifact: await getLatestArtifact(inputs.package_name),

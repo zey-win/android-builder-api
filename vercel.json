@@ -9,8 +9,20 @@
       "destination": "/api/build.js"
     },
     {
+      "source": "/api/cancel",
+      "destination": "/api/cancel.js"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/health.js"
+    },
+    {
+      "source": "/api/branches",
+      "destination": "/api/branches.js"
+    },
+    {
+      "source": "/api/generate-icon",
+      "destination": "/api/generate-icon.js"
     },
     {
       "source": "/api/icon",
