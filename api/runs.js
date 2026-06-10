@@ -37,6 +37,26 @@ async function findByRequestId(requestId) {
   };
 }
 
+async function listRecentRuns() {
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
+  const data = await githubFetch(
+    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=30`
+  );
+
+  return (data.workflow_runs || []).map((run) => ({
+    id: run.id,
+    runNumber: run.run_number,
+    runAttempt: run.run_attempt,
+    status: run.status,
+    conclusion: run.conclusion,
+    createdAt: run.created_at,
+    updatedAt: run.updated_at,
+    htmlUrl: run.html_url,
+    displayTitle: run.display_title || run.name
+  }));
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -50,7 +70,8 @@ module.exports = async function handler(req, res) {
     }
 
     if (!requestId) {
-      sendJson(req, res, 400, { ok: false, error: "request_id is required." });
+      const runs = await listRecentRuns();
+      sendJson(req, res, 200, { ok: true, runs });
       return;
     }
 
