@@ -2,6 +2,7 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
+  loadHiddenBuilds,
   readJson,
   requireOperator,
   safeString,
@@ -44,7 +45,16 @@ async function listRecentRuns() {
     `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=30`
   );
 
-  return (data.workflow_runs || []).map((run) => ({
+  const hidden = await loadHiddenBuilds();
+
+  const filtered = (data.workflow_runs || []).filter((run) => {
+    const title = `${run.display_title || ""} ${run.name || ""}`;
+    const byRequest = hidden.hiddenRequestIds.some((req) => req && title.includes(req));
+    const byRun = hidden.hiddenRunIds.includes(String(run.id));
+    return !byRequest && !byRun;
+  });
+
+  return filtered.map((run) => ({
     id: run.id,
     runNumber: run.run_number,
     runAttempt: run.run_attempt,

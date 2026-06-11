@@ -259,6 +259,82 @@ function errorPayload(error) {
   };
 }
 
+const HIDDEN_FILE_REPO = "zey-win/android-builder-api";
+const HIDDEN_FILE_PATH = "data/hidden-builds.json";
+
+async function loadHiddenBuilds() {
+  try {
+    const data = await githubFetch(`/repos/${HIDDEN_FILE_REPO}/contents/${HIDDEN_FILE_PATH}`);
+    if (data && data.content) {
+      const text = Buffer.from(data.content, "base64").toString("utf8");
+      const parsed = JSON.parse(text);
+      return {
+        hiddenRequestIds: Array.isArray(parsed.hiddenRequestIds) ? parsed.hiddenRequestIds : [],
+        hiddenRunIds: Array.isArray(parsed.hiddenRunIds) ? parsed.hiddenRunIds.map(String) : []
+      };
+    }
+  } catch (err) {
+    if (err.statusCode !== 404) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load hidden builds", err.message);
+    }
+  }
+  return { hiddenRequestIds: [], hiddenRunIds: [] };
+}
+
+async function addHiddenBuild({ requestId, runId } = {}) {
+  const hidden = await loadHiddenBuilds();
+  let changed = false;
+
+  const req = safeString(requestId);
+  if (req && !hidden.hiddenRequestIds.includes(req)) {
+    hidden.hiddenRequestIds.push(req);
+    changed = true;
+  }
+
+  const rid = runId ? String(runId) : "";
+  if (rid && !hidden.hiddenRunIds.includes(rid)) {
+    hidden.hiddenRunIds.push(rid);
+    changed = true;
+  }
+
+  if (!changed) {
+    return hidden;
+  }
+
+  const repo = HIDDEN_FILE_REPO;
+  const path = HIDDEN_FILE_PATH;
+
+  let sha;
+  try {
+    const existing = await githubFetch(`/repos/${repo}/contents/${path}`);
+    sha = existing.sha;
+  } catch (e) {
+    if (e.statusCode !== 404) throw e;
+  }
+
+  const contentObj = {
+    hiddenRequestIds: hidden.hiddenRequestIds,
+    hiddenRunIds: hidden.hiddenRunIds,
+    updatedAt: new Date().toISOString()
+  };
+  const content = Buffer.from(JSON.stringify(contentObj, null, 2)).toString("base64");
+
+  const body = {
+    message: `console: hide build ${req || rid}`,
+    content,
+    ...(sha ? { sha } : {})
+  };
+
+  await githubFetch(`/repos/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  return hidden;
+}
+
 module.exports = {
   assertRepo,
   assertSimpleRef,
@@ -274,5 +350,7 @@ module.exports = {
   requireOperator,
   safeString,
   sendJson,
-  setCors
+  setCors,
+  loadHiddenBuilds,
+  addHiddenBuild
 };

@@ -13,6 +13,10 @@
       "destination": "/api/cancel.js"
     },
     {
+      "source": "/api/delete",
+      "destination": "/api/delete.js"
+    },
+    {
       "source": "/api/health",
       "destination": "/api/health.js"
     },
