@@ -181,6 +181,7 @@ def remove_conflicting_asset_sdks(assets: pathlib.Path, manifest_path: pathlib.P
         ("com.google.external-dependency-manager", "ExternalDependencyManager"),
         ("com.zeywin.ads", "ZeyWinAds"),
         ("com.zeywin.ads", "ZeyWin"),
+        ("com.zeywin.ads", "UniWebView"),  # UniWebView включён в ZeyWinAds UPM
         ("com.crashguard.sdk", "CrashGuard"),
         ("com.crashguard.sdk", "CrashGuardSDK"),
     ]
