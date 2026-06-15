@@ -295,8 +295,12 @@ def fix_dll_metas(assets: pathlib.Path):
 
 
 def fix_dotween_modules(assets: pathlib.Path):
-    """Фиксит DOTween/Modules .asmdef проблемы когда DOTween установлен как DLL"""
-    print("\n[6/7] Fixing DOTween/Modules .asmdef issues...")
+    """Фиксит DOTween/Modules проблемы когда DOTween установлен как DLL.
+    
+    Когда DOTween.dll присутствует, .cs файлы в Modules не должны компилироваться
+    так как они используют внутренние APIs из DLL. Удаляем их.
+    """
+    print("\n[6/7] Fixing DOTween/Modules DLL issues...")
     
     dotween = assets / "Plugins" / "Demigiant" / "DOTween"
     if not (dotween / "DOTween.dll").exists():
@@ -308,18 +312,23 @@ def fix_dotween_modules(assets: pathlib.Path):
         print("  ℹ️  DOTween/Modules not found — skipping")
         return
     
-    removed_asmdef = 0
-    for asmdef in modules.rglob("*.asmdef"):
-        asmdef.unlink()
-        meta = pathlib.Path(str(asmdef) + ".meta")
-        if meta.exists():
-            meta.unlink()
-        removed_asmdef += 1
+    # Удаляем .asmdef файлы и .cs файлы из Modules
+    removed_items = 0
+    for pattern in ["*.asmdef", "*.cs"]:
+        for item in modules.glob(pattern):
+            try:
+                item.unlink()
+                meta = pathlib.Path(str(item) + ".meta")
+                if meta.exists():
+                    meta.unlink()
+                removed_items += 1
+            except Exception as e:
+                print(f"  ⚠️  Could not remove {item.name}: {e}")
     
-    if removed_asmdef > 0:
-        print(f"  ✅ Removed {removed_asmdef} .asmdef file(s) from DOTween/Modules")
+    if removed_items > 0:
+        print(f"  ✅ Removed {removed_items} item(s) from DOTween/Modules (DLL-based DOTween doesn't need source files)")
     else:
-        print("  ℹ️  No .asmdef files found in DOTween/Modules")
+        print("  ℹ️  No source files found in DOTween/Modules")
 
 
 def clear_cached_files(assets: pathlib.Path):
