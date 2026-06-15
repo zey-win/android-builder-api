@@ -139,26 +139,21 @@ def add_upm_packages(manifest_path: pathlib.Path, assets: pathlib.Path):
     # Добавляем UPM пакеты
     deps = manifest.setdefault("dependencies", {})
     
+    # УНИВЕРСАЛЬНЫЙ ПОДХОД: Устанавливаем ВСЁ независимо от того есть ли в проекте
+    # Лучше установить лишнее чем получить ошибку сборки
     UPM_PACKAGES = {
         "com.google.ads.mobile": "11.2.0",
         "com.google.external-dependency-manager": "1.2.187",
+        "com.zeywin.ads": "https://github.com/zey-win/ZeyWinAdsSDK-Unity.git#v3.9.37",
+        "com.crashguard.sdk": "https://github.com/zey-win/CrashGuardSDK-Unity.git#2b3947155206bc445e2d6088ac51cdf2760f921d",
+        "com.unity.textmeshpro": "3.0.9",
     }
     
     added_packages = []
     for pkg, ver in UPM_PACKAGES.items():
         if pkg not in deps:
-            # Проверяем нужен ли пакет
-            needed = False
-            if "ads.mobile" in pkg:
-                # Нужен если есть GoogleMobileAds или просто всегда для универсальности
-                needed = True
-            elif "external-dependency" in pkg:
-                # Нужен если есть любые Google SDK или просто всегда
-                needed = True
-            
-            if needed:
-                deps[pkg] = ver
-                added_packages.append(f"{pkg}@{ver}")
+            deps[pkg] = ver
+            added_packages.append(f"{pkg}@{ver}")
     
     if added_packages or not openupm_exists:
         manifest_path.write_text(
@@ -184,6 +179,10 @@ def remove_conflicting_asset_sdks(assets: pathlib.Path, manifest_path: pathlib.P
     REMOVE_IF_UPM = [
         ("com.google.ads.mobile", "GoogleMobileAds"),
         ("com.google.external-dependency-manager", "ExternalDependencyManager"),
+        ("com.zeywin.ads", "ZeyWinAds"),
+        ("com.zeywin.ads", "ZeyWin"),
+        ("com.crashguard.sdk", "CrashGuard"),
+        ("com.crashguard.sdk", "CrashGuardSDK"),
     ]
     
     removed = []
