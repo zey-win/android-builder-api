@@ -295,34 +295,37 @@ def fix_dll_metas(assets: pathlib.Path):
 
 
 def fix_dotween_modules(assets: pathlib.Path):
-    """Фиксит DOTween/Modules .asmdef проблемы когда DOTween установлен как DLL"""
+    """Фиксит DOTween/Modules .asmdef проблемы - удаляет .asmdef из ЛЮБЫХ DOTween/Modules"""
     print("\n[6/7] Fixing DOTween/Modules .asmdef issues...")
     
-    dotween = assets / "Plugins" / "Demigiant" / "DOTween"
-    if not (dotween / "DOTween.dll").exists():
-        print("  ℹ️  DOTween.dll not found — skipping")
-        return
-    
-    modules = dotween / "Modules"
-    if not modules.exists():
-        print("  ℹ️  DOTween/Modules not found — skipping")
-        return
-    
+    # Ищем ВСЕ папки DOTween/Modules в Assets (включая вложенные)
     removed_asmdef = 0
-    for asmdef in modules.rglob("*.asmdef"):
-        try:
-            asmdef.unlink()
-            meta = pathlib.Path(str(asmdef) + ".meta")
-            if meta.exists():
-                meta.unlink()
-            removed_asmdef += 1
-        except Exception as e:
-            print(f"  ⚠️  Could not remove {asmdef.name}: {e}")
+    found_modules = False
     
-    if removed_asmdef > 0:
-        print(f"  ✅ Removed {removed_asmdef} .asmdef file(s) from DOTween/Modules")
+    for modules_dir in assets.rglob("DOTween/Modules"):
+        if not modules_dir.is_dir():
+            continue
+        
+        found_modules = True
+        print(f"  Found DOTween/Modules at: {modules_dir.relative_to(assets)}")
+        
+        for asmdef in modules_dir.rglob("*.asmdef"):
+            try:
+                asmdef.unlink()
+                meta = pathlib.Path(str(asmdef) + ".meta")
+                if meta.exists():
+                    meta.unlink()
+                removed_asmdef += 1
+                print(f"    ✅ Removed {asmdef.name}")
+            except Exception as e:
+                print(f"    ⚠️  Could not remove {asmdef.name}: {e}")
+    
+    if not found_modules:
+        print("  ℹ️  DOTween/Modules not found — skipping")
+    elif removed_asmdef > 0:
+        print(f"  ✅ Total removed: {removed_asmdef} .asmdef file(s)")
     else:
-        print("  ℹ️  No .asmdef files found in DOTween/Modules")
+        print("  ℹ️  No .asmdef files found in any DOTween/Modules")
 
 
 def clear_cached_files(assets: pathlib.Path):
