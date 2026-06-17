@@ -13,7 +13,7 @@ async function findByRequestId(requestId) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
   const data = await githubFetch(
-    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=30`
+    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=100`
   );
 
   const run = (data.workflow_runs || []).find((item) => {
@@ -42,7 +42,7 @@ async function listRecentRuns() {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
   const data = await githubFetch(
-    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=30`
+    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=100`
   );
 
   const hidden = await loadHiddenBuilds();
