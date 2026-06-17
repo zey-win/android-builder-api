@@ -344,13 +344,15 @@ module.exports = async function handler(req, res) {
     let iconPath = safeString(payload.icon_png_path);
 
     if (iconBuffer) {
-      iconPath = normalizeIconPath(iconPath);
+      const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      const iconName = `builds/icons/${requestId}.png`;
       iconResult = await commitIcon({
-        repo: gameRepository,
-        branch: gameRef,
-        iconPath,
+        repo: ciRepo,
+        branch: "main",
+        iconPath: iconName,
         iconBuffer
       });
+      iconPath = `https://raw.githubusercontent.com/${ciRepo}/main/${iconName}`;
     }
 
     if (firebaseFile) {
@@ -370,7 +372,7 @@ module.exports = async function handler(req, res) {
         game_repository: gameRepository,
         game_ref: gameRef
       },
-      iconResult?.path || iconPath
+      iconPath
     );
 
     const dispatchStartedAt = new Date();
