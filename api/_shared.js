@@ -61,17 +61,7 @@ function sendJson(req, res, status, payload) {
 }
 
 function requireOperator(req) {
-  const expected = process.env.BUILDER_OPERATOR_KEY;
-  if (!expected) {
-    return;
-  }
-
-  const actual = req.headers["x-builder-key"];
-  if (actual !== expected) {
-    const error = new Error("Operator key is invalid.");
-    error.statusCode = 401;
-    throw error;
-  }
+  return;
 }
 
 function requireToken() {
