@@ -34,6 +34,19 @@ const STATIC_ICON_CANDIDATES = [
   "Assets/Plugins/Android/res/mipmap-xxxhdpi/app_icon.png"
 ];
 
+const STATIC_FALLBACK_URLS = {
+  "zey-win/plinko": "https://zey-win.github.io/repo-icons/zey-win__plinko.png",
+  "zey-win/SlotSpot": "https://zey-win.github.io/repo-icons/zey-win__SlotSpot.png",
+  "zey-win/Unstopable": "https://zey-win.github.io/repo-icons/zey-win__Unstopable.png",
+  "zey-win/wheel-of-fortune": "https://zey-win.github.io/repo-icons/zey-win__wheel-of-fortune.png",
+  "zey-win/blackjack": "https://zey-win.github.io/repo-icons/zey-win__blackjack.png",
+  "zey-win/baccarat-tiger": "https://zey-win.github.io/repo-icons/zey-win__baccarat-tiger.png",
+  "zey-win/roulette": "https://zey-win.github.io/repo-icons/zey-win__roulette.png",
+  "zey-win/dragon-tiger": "https://zey-win.github.io/repo-icons/zey-win__dragon-tiger.png",
+  "zey-win/android-builder-api": "https://zey-win.github.io/repo-icons/zey-win__plinko.png",
+  "zey-win/ci-cd": "https://zey-win.github.io/repo-icons/zey-win__plinko.png"
+};
+
 function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
@@ -71,6 +84,18 @@ function scoreIconPath(path) {
 
 function dedupe(values) {
   return [...new Set(values.filter(Boolean))];
+}
+
+async function fetchPngDataUrl(url) {
+  const response = await fetch(url);
+  if (!response.ok) return null;
+  const blob = await response.blob();
+  if (blob.type && blob.type !== "image/png") return null;
+  if (!blob.size || blob.size > MAX_PREVIEW_BYTES) return null;
+  const buffer = Buffer.from(await blob.arrayBuffer());
+  if (!isPng(buffer)) return null;
+  const base64 = buffer.toString("base64");
+  return `data:image/png;base64,${base64}`;
 }
 
 async function readPngContent(repo, ref, path) {
@@ -131,6 +156,15 @@ async function findIcon(repo, ref, explicitPath) {
       if (error.statusCode !== 404) {
         throw error;
       }
+    }
+  }
+
+  // Fallback: if no icon found in repo, try static URL from zey-win.github.io repo-icons/
+  const fallbackUrl = STATIC_FALLBACK_URLS[repo];
+  if (fallbackUrl) {
+    const dataUrl = await fetchPngDataUrl(fallbackUrl);
+    if (dataUrl) {
+      return { path: "Assets/Sprites/Icon.png", dataUrl, source: "static-fallback" };
     }
   }
 

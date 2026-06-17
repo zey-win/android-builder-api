@@ -47,12 +47,14 @@ async function listRecentRuns() {
 
   const hidden = await loadHiddenBuilds();
 
-  const filtered = (data.workflow_runs || []).filter((run) => {
-    const title = `${run.display_title || ""} ${run.name || ""}`;
-    const byRequest = hidden.hiddenRequestIds.some((req) => req && title.includes(req));
-    const byRun = hidden.hiddenRunIds.includes(String(run.id));
-    return !byRequest && !byRun;
-  });
+  const filtered = (data.workflow_runs || [])
+    .filter((run) => {
+      const title = `${run.display_title || ""} ${run.name || ""}`;
+      const byRequest = hidden.hiddenRequestIds.some((req) => req && title.includes(req));
+      const byRun = hidden.hiddenRunIds.includes(String(run.id));
+      return !byRequest && !byRun;
+    })
+    .slice(0, 50);
 
   return filtered.map((run) => ({
     id: run.id,
