@@ -31,7 +31,10 @@ const STATIC_ICON_CANDIDATES = [
   "Assets/Plugins/Android/res/mipmap-mdpi/app_icon.png",
   "Assets/Plugins/Android/res/mipmap-xhdpi/app_icon.png",
   "Assets/Plugins/Android/res/mipmap-xxhdpi/app_icon.png",
-  "Assets/Plugins/Android/res/mipmap-xxxhdpi/app_icon.png"
+  "Assets/Plugins/Android/res/mipmap-xxxhdpi/app_icon.png",
+  "Assets/Art/icon.png",
+  "Assets/Art/icon2.png",
+  "Assets/UI/Dragon Tiger Icon.png"
 ];
 
 const STATIC_FALLBACK_URLS = {
