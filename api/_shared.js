@@ -1,4 +1,4 @@
-const DEFAULT_ALLOWED_ORIGIN = "https://zey-win.github.io";
+const DEFAULT_ALLOWED_ORIGIN = "https://zey-win.github.io,https://zey-wingithubio.vercel.app";
 const DEFAULT_GITHUB_ORG = "zey-win";
 const DEFAULT_GAME_REPOS = [
   "zey-win/plinko",
