@@ -117,23 +117,36 @@ async function fetchPngDataUrl(url) {
 async function readPngContent(repo, ref, path) {
   const encodedPath = encodeContentPath(path);
   const file = await githubFetch(`/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`);
-  if (Array.isArray(file) || file.type !== "file" || !file.content) {
+  if (Array.isArray(file) || file.type !== "file") return null;
+
+  // If content exists, decode base64 directly
+  if (file.content) {
+    const base64 = String(file.content).replace(/\s/g, "");
+    const buffer = Buffer.from(base64, "base64");
+    if (isPng(buffer) && buffer.length <= MAX_PREVIEW_BYTES) {
+      return { path, sha: file.sha || "", size: buffer.length, htmlUrl: file.html_url || "", dataUrl: `data:image/png;base64,${base64}` };
+    }
     return null;
   }
 
-  const base64 = String(file.content || "").replace(/\s/g, "");
-  const buffer = Buffer.from(base64, "base64");
-  if (!isPng(buffer) || buffer.length > MAX_PREVIEW_BYTES) {
-    return null;
+  // For LFS or other cases without content, use download_url
+  if (file.download_url) {
+    return await fetchIconFromUrl(file.download_url, path);
   }
 
-  return {
-    path,
-    sha: file.sha || "",
-    size: buffer.length,
-    htmlUrl: file.html_url || "",
-    dataUrl: `data:image/png;base64,${base64}`
-  };
+  return null;
+}
+
+async function fetchIconFromUrl(url, path) {
+  try {
+    const response = await fetch(url, { headers: { "Accept": "application/octet-stream" } });
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    if (!blob.size || blob.size > MAX_PREVIEW_BYTES) return null;
+    const buffer = Buffer.from(await blob.arrayBuffer());
+    if (!isPng(buffer)) return null;
+    return { path, size: buffer.length, dataUrl: `data:image/png;base64,${buffer.toString("base64")}`, source: "download-url" };
+  } catch { return null; }
 }
 
 async function listScoredTreeCandidates(repo, ref) {
