@@ -182,9 +182,9 @@ async function findIcon(repo, ref, explicitPath) {
   const REPO_KNOWN_PATHS = {
     "zey-win/plinko": ["Assets/ZeyWin/IconOverride/android-icon.png", "Assets/Sprites/Icon.png"],
     "zey-win/blackjack": ["Assets/Sprites/icon.png"],
-    "zey-win/roulette": ["Assets/Roulette Pro/UI/Icons/europeanicon.png"],
+    "zey-win/roulette": ["Assets/Roulette Icon.png"],
     "zey-win/dragon-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
-    "zey-win/baccarat-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
+    "zey-win/baccarat-tiger": ["Assets/UI/baccarat_logo.png"],
     "zey-win/wheel-of-fortune": ["Assets/Sprites/Catcher Wheel Icon.png"],
     "zey-win/Unstopable": ["Assets/Art/icon.png", "Assets/Art/icon2.png"],
     "zey-win/SlotSpot": ["Assets/ZeyWin/IconOverride/android-icon.png"]
