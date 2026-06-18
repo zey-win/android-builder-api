@@ -38,16 +38,16 @@ const STATIC_ICON_CANDIDATES = [
 ];
 
 const STATIC_FALLBACK_URLS = {
-  "zey-win/plinko": "https://zey-win.github.io/repo-icons/zey-win__plinko.png",
-  "zey-win/SlotSpot": "https://zey-win.github.io/repo-icons/zey-win__SlotSpot.png",
-  "zey-win/Unstopable": "https://zey-win.github.io/repo-icons/zey-win__Unstopable.png",
-  "zey-win/wheel-of-fortune": "https://zey-win.github.io/repo-icons/zey-win__wheel-of-fortune.png",
-  "zey-win/blackjack": "https://zey-win.github.io/repo-icons/zey-win__blackjack.png",
-  "zey-win/baccarat-tiger": "https://zey-win.github.io/repo-icons/zey-win__baccarat-tiger.png",
-  "zey-win/roulette": "https://zey-win.github.io/repo-icons/zey-win__roulette.png",
-  "zey-win/dragon-tiger": "https://zey-win.github.io/repo-icons/zey-win__dragon-tiger.png",
-  "zey-win/android-builder-api": "https://zey-win.github.io/repo-icons/zey-win__plinko.png",
-  "zey-win/ci-cd": "https://zey-win.github.io/repo-icons/zey-win__plinko.png"
+  "zey-win/plinko": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png",
+  "zey-win/SlotSpot": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__SlotSpot.png",
+  "zey-win/Unstopable": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__Unstopable.png",
+  "zey-win/wheel-of-fortune": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__wheel-of-fortune.png",
+  "zey-win/blackjack": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__blackjack.png",
+  "zey-win/baccarat-tiger": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__baccarat-tiger.png",
+  "zey-win/roulette": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__roulette.png",
+  "zey-win/dragon-tiger": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__dragon-tiger.png",
+  "zey-win/android-builder-api": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png",
+  "zey-win/ci-cd": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png"
 };
 
 function encodeContentPath(path) {
