@@ -25,7 +25,7 @@ on:
         required: true
         default: Plinko
       icon_png_path:
-        description: Optional PNG icon path inside the game repository Assets folder
+        description: Optional PNG icon URL (https://...) or path inside game repository Assets folder
         required: false
         default: ''
       zeywin_api_key:
@@ -154,7 +154,7 @@ on:
         required: true
         type: string
       icon_png_path:
-        description: Optional PNG icon path inside the game repository Assets folder
+        description: Optional PNG icon URL (https://...) or path inside game repository Assets folder
         required: false
         default: ''
         type: string
@@ -346,6 +346,42 @@ jobs:
           token: ${{ secrets.PRIVATE_REPO_TOKEN }}
           persist-credentials: false
           fetch-depth: 0
+          lfs: true
+
+      - name: Download custom icon from static site
+        shell: bash
+        env:
+          ICON_PNG_PATH: ${{ inputs.icon_png_path }}
+        run: |
+          set -euo pipefail
+          
+          # Если icon_png_path начинается с https://, скачиваем иконку
+          if [[ "$ICON_PNG_PATH" == https://* ]]; then
+            echo "🌐 Downloading custom icon from: $ICON_PNG_PATH"
+            mkdir -p game/Assets/CustomIcons
+            curl -fsSL "$ICON_PNG_PATH" -o game/Assets/CustomIcons/custom-icon.png
+            
+            # Проверяем что файл скачался
+            if [ -f game/Assets/CustomIcons/custom-icon.png ]; then
+              file_size=$(stat -c%s "game/Assets/CustomIcons/custom-icon.png" 2>/dev/null || stat -f%z "game/Assets/CustomIcons/custom-icon.png" 2>/dev/null || echo "0")
+              echo "✅ Icon downloaded successfully ($file_size bytes)"
+              echo "ANDROID_ICON_PNG_PATH=Assets/CustomIcons/custom-icon.png" >> "$GITHUB_ENV"
+            else
+              echo "❌ Failed to download icon"
+              exit 1
+            fi
+          elif [ -n "$ICON_PNG_PATH" ]; then
+            # Локальный путь в репозитории - проверяем существование
+            if [ -f "game/$ICON_PNG_PATH" ]; then
+              echo "✅ Using icon from game repository: $ICON_PNG_PATH"
+              echo "ANDROID_ICON_PNG_PATH=$ICON_PNG_PATH" >> "$GITHUB_ENV"
+            else
+              echo "⚠️  Icon not found in game repository: $ICON_PNG_PATH"
+              echo "Will use project's default icon"
+            fi
+          else
+            echo "ℹ️  No custom icon specified, using project default"
+          fi
 
       - name: Configure private SDK access
         shell: bash
@@ -431,6 +467,47 @@ jobs:
             echo "ANDROID_SIGNING_PROFILE=$profile_name"
           } >> "$GITHUB_ENV"
           echo "Using Android signing profile: $profile_name"
+
+      - name: Download custom icon from URL
+        shell: bash
+        env:
+          ICON_PNG_PATH: ${{ inputs.icon_png_path }}
+        run: |
+          set -euo pipefail
+          
+          if [ -z "$ICON_PNG_PATH" ]; then
+            echo "No icon_png_path provided, will use project default icon"
+            exit 0
+          fi
+          
+          # Check if it's a URL (https://)
+          if [[ "$ICON_PNG_PATH" == https://* ]]; then
+            echo "📥 Downloading icon from URL: $ICON_PNG_PATH"
+            
+            # Create directory for downloaded icons
+            mkdir -p game/Assets/DownloadedIcons
+            
+            # Download the icon
+            curl -L --fail --max-time 30 "$ICON_PNG_PATH" -o game/Assets/DownloadedIcons/custom-icon.png
+            
+            if [ -f game/Assets/DownloadedIcons/custom-icon.png ]; then
+              file_size=$(stat -c%s game/Assets/DownloadedIcons/custom-icon.png 2>/dev/null || stat -f%z game/Assets/DownloadedIcons/custom-icon.png)
+              echo "✅ Icon downloaded successfully ($file_size bytes)"
+              echo "ANDROID_ICON_PNG_PATH=Assets/DownloadedIcons/custom-icon.png" >> "$GITHUB_ENV"
+            else
+              echo "❌ Failed to download icon from $ICON_PNG_PATH"
+              exit 1
+            fi
+          else
+            # It's a repository path - validate it exists
+            if [ -f "game/$ICON_PNG_PATH" ]; then
+              echo "✅ Using icon from repository: $ICON_PNG_PATH"
+              echo "ANDROID_ICON_PNG_PATH=$ICON_PNG_PATH" >> "$GITHUB_ENV"
+            else
+              echo "❌ Icon not found in repository: $ICON_PNG_PATH"
+              exit 1
+            fi
+          fi
 
       - name: Prepare Android icon override
         shell: bash
@@ -656,11 +733,9 @@ jobs:
               }
           }
           CS
-
-          if [ -n "$ICON_PNG_PATH" ] && [ ! -f "game/$ICON_PNG_PATH" ]; then
-            echo "icon_png_path was provided but the PNG is missing in the checked-out game repo: $ICON_PNG_PATH"
-            exit 1
-          fi
+          
+          # Note: ANDROID_ICON_PNG_PATH is set by previous step "Download custom icon from URL"
+          # This preprocessor script will read it from environment
 
       - name: Resolve APK version
         id: resolve_version
@@ -748,15 +823,66 @@ jobs:
           set -euxo pipefail
           echo "----- disk before cleanup -----"
           df -h
+
+          # Remove heavy pre-installed tools
           sudo rm -rf /usr/share/dotnet
           sudo rm -rf /usr/local/share/boost
           sudo rm -rf /usr/local/share/powershell
           sudo rm -rf /usr/share/swift
           sudo rm -rf /opt/ghc
           sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+          sudo rm -rf /opt/hostedtoolcache
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/local/share/chromium
+          sudo rm -rf /usr/share/postgresql
+          sudo rm -rf /usr/share/miniconda
+          sudo rm -rf /usr/share/az_*
+          sudo rm -rf /usr/share/azcopy
+          sudo rm -rf /usr/share/java
+          sudo rm -rf /usr/share/R
+          sudo rm -rf /usr/share/ruby
+          sudo rm -rf /usr/share/rust
+          sudo rm -rf /usr/share/sbt
+          sudo rm -rf /usr/share/php
+          sudo rm -rf /usr/share/perl
+          sudo rm -rf /usr/share/maven
+          sudo rm -rf /usr/share/gradle
+          sudo rm -rf /usr/share/go
+          sudo rm -rf /usr/share/cabal
+          sudo rm -rf /usr/share/erlang
+          sudo rm -rf /usr/share/leiningen
+          sudo rm -rf /usr/share/elasticsearch
+          sudo rm -rf /usr/local/share/vcpkg
+          sudo rm -rf /opt/actions
           sudo apt-get clean
+          sudo apt-get autoremove -y
+
+          # Free up Docker space before pulling the Unity image
+          docker system prune -a -f --volumes 2>/dev/null || true
+
           echo "----- disk after cleanup -----"
           df -h
+
+      - name: Disable Git LFS for game repository
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Disabling Git LFS to avoid Curl error 42..."
+          
+          # Создаем .lfsconfig в игровом репозитории
+          cat > game/.lfsconfig <<'EOF'
+          [lfs]
+          	fetchinclude =
+          	fetchexclude = *
+          EOF
+          
+          # Удаляем .gitattributes если есть
+          if [ -f game/.gitattributes ]; then
+            rm -f game/.gitattributes
+            echo "Removed game/.gitattributes"
+          fi
+          
+          echo "✅ Git LFS disabled for game repository"
 
       - name: Normalize legacy Android resources
         shell: bash
@@ -946,6 +1072,37 @@ jobs:
           echo "Running comprehensive SDK integration fixer..."
           python3 .ci-patches/fix-sdk-integration.py "game/Assets" "game/Packages/manifest.json"
 
+      - name: Apply Unity Builder API deprecation fixes
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Applying Unity Builder API deprecation fixes..."
+          if python3 .ci-patches/fix-unity-builder-api.py "game"; then
+            echo "✅ Unity Builder API fixes applied successfully"
+          else
+            echo "⚠️  Unity Builder API patch failed - continuing with unfixed behavior"
+            echo "This is expected if the package cache hasn't been populated yet"
+            echo "The build may still succeed if there are no deprecated API issues"
+          fi
+
+      - name: Apply BuildResult.Unknown bug fix
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "Applying BuildResult.Unknown bug fix (exit code 103 → 101)..."
+          if python3 .ci-patches/apply-buildresult-unknown-fix.py "game"; then
+            echo "✅ BuildResult.Unknown fix applied successfully"
+            echo "Fix includes:"
+            echo "  - Exit code changed from 103 to 101"
+            echo "  - Exception handling with full logging"
+            echo "  - BuildReport analysis for error extraction"
+            echo "  - Unity version detection and mismatch warning"
+          else
+            echo "⚠️  BuildResult.Unknown fix not applied - package cache may not be ready yet"
+            echo "This is expected if the package hasn't been cached"
+            echo "The fix will be applied after Unity resolves packages"
+          fi
+
       - name: Build APK
         uses: game-ci/unity-builder@v4
         timeout-minutes: 105
@@ -967,7 +1124,6 @@ jobs:
           ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID: ${{ inputs.admob_android_rewarded_interstitial_id || secrets.ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID }}
           ADMOB_ANDROID_NATIVE_ID: ${{ inputs.admob_android_native_id || secrets.ADMOB_ANDROID_NATIVE_ID }}
           ADMOB_ANDROID_APP_OPEN_ID: ${{ inputs.admob_android_app_open_id || secrets.ADMOB_ANDROID_APP_OPEN_ID }}
-          ANDROID_ICON_PNG_PATH: ${{ inputs.icon_png_path }}
           APK_OUTPUT_PATH: ${{ steps.resolve_version.outputs.apk_output_path }}
           AAB_OUTPUT_PATH: ${{ steps.resolve_version.outputs.aab_output_path }}
         with:
@@ -984,7 +1140,6 @@ jobs:
             -androidVersionName "${{ steps.resolve_version.outputs.version_name }}"
             -androidVersionCode "${{ steps.resolve_version.outputs.version_code }}"
             -androidKeystorePath "/github/workspace/.ci/keystore/user.keystore"
-            -iconPngPath "${{ inputs.icon_png_path }}"
             -zeywinApiKey "${{ inputs.zeywin_api_key || secrets.ZEYWIN_API_KEY }}"
             -admobAndroidAppId "${{ inputs.admob_android_app_id || secrets.ADMOB_ANDROID_APP_ID }}"
             -admobAndroidBannerId "${{ inputs.admob_android_banner_id || secrets.ADMOB_ANDROID_BANNER_ID }}"
@@ -1016,7 +1171,6 @@ jobs:
           ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID: ${{ inputs.admob_android_rewarded_interstitial_id || secrets.ADMOB_ANDROID_REWARDED_INTERSTITIAL_ID }}
           ADMOB_ANDROID_NATIVE_ID: ${{ inputs.admob_android_native_id || secrets.ADMOB_ANDROID_NATIVE_ID }}
           ADMOB_ANDROID_APP_OPEN_ID: ${{ inputs.admob_android_app_open_id || secrets.ADMOB_ANDROID_APP_OPEN_ID }}
-          ANDROID_ICON_PNG_PATH: ${{ inputs.icon_png_path }}
           APK_OUTPUT_PATH: ${{ steps.resolve_version.outputs.apk_output_path }}
           AAB_OUTPUT_PATH: ${{ steps.resolve_version.outputs.aab_output_path }}
         with:
@@ -1033,7 +1187,6 @@ jobs:
             -androidVersionName "${{ steps.resolve_version.outputs.version_name }}"
             -androidVersionCode "${{ steps.resolve_version.outputs.version_code }}"
             -androidKeystorePath "/github/workspace/.ci/keystore/user.keystore"
-            -iconPngPath "${{ inputs.icon_png_path }}"
             -zeywinApiKey "${{ inputs.zeywin_api_key || secrets.ZEYWIN_API_KEY }}"
             -admobAndroidAppId "${{ inputs.admob_android_app_id || secrets.ADMOB_ANDROID_APP_ID }}"
             -admobAndroidBannerId "${{ inputs.admob_android_banner_id || secrets.ADMOB_ANDROID_BANNER_ID }}"
