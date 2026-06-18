@@ -472,11 +472,49 @@ jobs:
                   }
 
                   iconPath = iconPath.Trim().Replace("\\", "/").TrimStart('/');
-                  if (!iconPath.StartsWith("Assets/", StringComparison.Ordinal) || !iconPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
-                      throw new Exception("[ZeyWinActions] icon_png_path must point to a PNG file under Assets/: " + iconPath);
 
-                  if (!File.Exists(iconPath))
-                      throw new FileNotFoundException("[ZeyWinActions] Selected Android icon was not found in checked-out game repo.", iconPath);
+                  // Если пришёл URL — скачиваем иконку внутри Unity Editor
+                  if (iconPath.StartsWith("https://", StringComparison.OrdinalIgnoreCase) ||
+                      iconPath.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
+                  {
+                      Debug.Log("[ZeyWinActions] Downloading icon from URL: " + iconPath);
+                      var localDir = "Assets/DownloadedIcons";
+                      var localPath = localDir + "/custom-icon.png";
+
+                      if (!Directory.Exists(localDir))
+                          Directory.CreateDirectory(localDir);
+
+                      try
+                      {
+                          using (var webClient = new System.Net.WebClient())
+                          {
+                              webClient.Headers.Add("User-Agent", "Unity-Editor/5.0");
+                              webClient.DownloadFile(iconPath, localPath);
+                          }
+
+                          if (!File.Exists(localPath))
+                              throw new Exception("Downloaded file not found");
+
+                          var fileSize = new FileInfo(localPath).Length;
+                          Debug.Log("[ZeyWinActions] Icon downloaded successfully (" + fileSize + " bytes)");
+
+                          AssetDatabase.ImportAsset(localPath, ImportAssetOptions.ForceUpdate);
+                          iconPath = localPath;
+                      }
+                      catch (Exception ex)
+                      {
+                          throw new Exception("[ZeyWinActions] Failed to download icon from " + iconPath + ": " + ex.Message);
+                      }
+                  }
+                  else
+                  {
+                      // Локальный путь — проверяем что он под Assets/
+                      if (!iconPath.StartsWith("Assets/", StringComparison.Ordinal) || !iconPath.EndsWith(".png", StringComparison.OrdinalIgnoreCase))
+                          throw new Exception("[ZeyWinActions] icon_png_path must point to a PNG file under Assets/: " + iconPath);
+
+                      if (!File.Exists(iconPath))
+                          throw new FileNotFoundException("[ZeyWinActions] Selected Android icon was not found in checked-out game repo.", iconPath);
+                  }
 
                   var importer = AssetImporter.GetAtPath(iconPath) as TextureImporter;
                   if (importer != null)
