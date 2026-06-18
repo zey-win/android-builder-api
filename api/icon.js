@@ -88,6 +88,9 @@ function scoreIconPath(path) {
   if (lower.includes("infobutton")) score -= 200;
   if (lower.includes("clearbutton")) score -= 200;
   if (lower.includes("bebelbtn")) score -= 200;
+  if (lower.includes("doubledownbtn")) score -= 200;
+  if (lower.includes("/buttons/")) score -= 200;
+  if (lower.includes("back.png")) score -= 200;
   if (lower.includes("settings")) score -= 100;
   if (lower.includes("/cloth/")) score -= 100;
   if (lower.includes("/roads/")) score -= 100;
