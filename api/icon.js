@@ -156,32 +156,46 @@ async function listScoredTreeCandidates(repo, ref) {
 }
 
 async function findIcon(repo, ref, explicitPath) {
-  const candidates = dedupe([
-    normalizePath(explicitPath),
-    ...STATIC_ICON_CANDIDATES,
-    ...(await listScoredTreeCandidates(repo, ref))
-  ]);
-
-  for (const path of candidates) {
+  // Try explicit path first
+  if (explicitPath) {
     try {
-      const icon = await readPngContent(repo, ref, path);
-      if (icon) {
-        return icon;
-      }
-    } catch (error) {
-      if (error.statusCode !== 404) {
-        throw error;
-      }
-    }
+      const icon = await readPngContent(repo, ref, explicitPath);
+      if (icon) return icon;
+    } catch (e) { if (e.statusCode !== 404) throw e; }
   }
 
-  // Fallback: if no icon found in repo, try static URL from zey-win.github.io repo-icons/
+  // Then try repo-specific known paths (from Unity projects)
+  const REPO_KNOWN_PATHS = {
+    "zey-win/plinko": ["Assets/ZeyWin/IconOverride/android-icon.png", "Assets/Sprites/Icon.png"],
+    "zey-win/blackjack": ["Assets/Sprites/icon.png"],
+    "zey-win/roulette": ["Assets/Sprites/icon.png"],
+    "zey-win/dragon-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
+    "zey-win/baccarat-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
+    "zey-win/wheel-of-fortune": ["Assets/Sprites/Catcher Wheel Icon.png"],
+    "zey-win/Unstopable": ["Assets/Art/icon.png", "Assets/Art/icon2.png"],
+    "zey-win/SlotSpot": ["Assets/ZeyWin/IconOverride/android-icon.png"]
+  };
+  const repoPaths = dedupe([...(REPO_KNOWN_PATHS[repo] || []), ...STATIC_ICON_CANDIDATES]);
+  for (const path of repoPaths) {
+    try {
+      const icon = await readPngContent(repo, ref, path);
+      if (icon) return icon;
+    } catch (e) { if (e.statusCode !== 404) throw e; }
+  }
+
+  // Then try scored tree candidates
+  for (const path of await listScoredTreeCandidates(repo, ref)) {
+    try {
+      const icon = await readPngContent(repo, ref, path);
+      if (icon) return icon;
+    } catch (e) { if (e.statusCode !== 404) throw e; }
+  }
+
+  // Fallback: try static URL from repo-icons/
   const fallbackUrl = STATIC_FALLBACK_URLS[repo];
   if (fallbackUrl) {
     const dataUrl = await fetchPngDataUrl(fallbackUrl);
-    if (dataUrl) {
-      return { path: "Assets/Sprites/Icon.png", dataUrl, source: "static-fallback" };
-    }
+    if (dataUrl) return { path: "fallback.png", dataUrl, source: "static-fallback" };
   }
 
   return null;
