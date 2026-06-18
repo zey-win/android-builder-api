@@ -39,6 +39,9 @@ const STATIC_ICON_CANDIDATES = [
 
 const STATIC_FALLBACK_URLS = {
   "zey-win/plinko": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png",
+  "zey-win/plinko@app/plinko-real-money": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinkorm.png",
+  "zey-win/plinko@app/plinko-real-game": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png",
+  "zey-win/plinko@app/plinko": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png",
   "zey-win/SlotSpot": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__SlotSpot.png",
   "zey-win/Unstopable": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__Unstopable.png",
   "zey-win/wheel-of-fortune": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__wheel-of-fortune.png",
