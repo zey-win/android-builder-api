@@ -181,6 +181,9 @@ async function findIcon(repo, ref, explicitPath) {
   // Then try repo-specific known paths with download_url fallback for LFS
   const REPO_KNOWN_PATHS = {
     "zey-win/plinko": ["Assets/ZeyWin/IconOverride/android-icon.png", "Assets/Sprites/Icon.png"],
+    "zey-win/plinko@app/plinko-real-money": ["Assets/Sprites/Icon.png"],
+    "zey-win/plinko@app/plinko-real-game": ["Assets/Sprites/Icon.png"],
+    "zey-win/plinko@app/plinko": ["Assets/Sprites/Icon.png"],
     "zey-win/blackjack": ["Assets/Sprites/icon.png"],
     "zey-win/roulette": ["Assets/Roulette Icon.png"],
     "zey-win/dragon-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
