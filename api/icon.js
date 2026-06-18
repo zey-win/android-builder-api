@@ -70,18 +70,28 @@ function scoreIconPath(path) {
   const lower = path.toLowerCase();
   let score = 0;
   if (lower === "assets/zeywin/iconoverride/android-icon.png") score += 200;
+  if (lower === "assets/art/icon.png") score += 190;
+  if (lower === "assets/art/icon2.png") score += 185;
   if (lower === "assets/sprites/icon.png") score += 180;
+  if (lower === "assets/ui/dragon tiger icon.png") score += 175;
   if (lower.includes("/appicon")) score += 120;
   if (lower.includes("/app_icon") || lower.includes("/app-icon")) score += 120;
   if (lower.includes("/launcher")) score += 110;
   if (/\/icon\.png$/.test(lower)) score += 100;
-  if (lower.includes("/icons/")) score += 30;
+  if (lower.includes("/icons/")) score -= 30;
   if (lower.includes("/sprites/")) score += 25;
   if (lower.includes("/plugins/android/res/")) score += 20;
   if (lower.includes("textmesh pro/")) score -= 140;
   if (lower.includes("/editor/")) score -= 120;
   if (lower.includes("/loading/")) score -= 50;
   if (lower.includes("ad_icon")) score -= 100;
+  if (lower.includes("infobutton")) score -= 200;
+  if (lower.includes("clearbutton")) score -= 200;
+  if (lower.includes("bebelbtn")) score -= 200;
+  if (lower.includes("settings")) score -= 100;
+  if (lower.includes("/cloth/")) score -= 100;
+  if (lower.includes("/roads/")) score -= 100;
+  if (lower.includes("usericon")) score -= 100;
   return score;
 }
 
