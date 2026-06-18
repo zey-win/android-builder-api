@@ -119,22 +119,23 @@ async function readPngContent(repo, ref, path) {
   const file = await githubFetch(`/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(ref)}`);
   if (Array.isArray(file) || file.type !== "file") return null;
 
-  // If content exists, decode base64 directly
+  let result = null;
+
+  // If content exists, try decode as PNG
   if (file.content) {
     const base64 = String(file.content).replace(/\s/g, "");
     const buffer = Buffer.from(base64, "base64");
     if (isPng(buffer) && buffer.length <= MAX_PREVIEW_BYTES) {
-      return { path, sha: file.sha || "", size: buffer.length, htmlUrl: file.html_url || "", dataUrl: `data:image/png;base64,${base64}` };
+      result = { path, sha: file.sha || "", size: buffer.length, htmlUrl: file.html_url || "", dataUrl: `data:image/png;base64,${base64}` };
     }
-    return null;
   }
 
-  // For LFS or other cases without content, use download_url
-  if (file.download_url) {
-    return await fetchIconFromUrl(file.download_url, path);
+  // If content is LFS pointer (not a valid PNG), try download_url
+  if (!result && file.download_url) {
+    result = await fetchIconFromUrl(file.download_url, path);
   }
 
-  return null;
+  return result;
 }
 
 async function fetchIconFromUrl(url, path) {
