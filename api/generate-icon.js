@@ -7,70 +7,56 @@ const {
   sendJson
 } = require("./_shared");
 
-const DEFAULT_SIZE = "1024x1024";
+const PROMPTS = {
+  "zey-win/plinko": "Plinko game app icon, falling balls bouncing through pegs, bright neon style, gold coins, casino theme, vibrant colors, 3D render style, 1024x1024",
+  "zey-win/blackjack": "Blackjack game app icon, ace of spades and king of hearts cards, green felt table, poker chips, premium casino style, gold accents, 1024x1024",
+  "zey-win/roulette": "Roulette wheel app icon, spinning roulette wheel with red and black numbers, golden ball, casino background, dramatic lighting, 1024x1024",
+  "zey-win/dragon-tiger": "Dragon vs Tiger card game app icon, fierce dragon on one side, orange tiger on the other, gold and red theme, casino card duel, 1024x1024",
+  "zey-win/baccarat-tiger": "Baccarat tiger casino game app icon, majestic tiger face, playing cards, gold casino chips, dark green background, premium elegant style, 1024x1024",
+  "zey-win/wheel-of-fortune": "Wheel of Fortune game app icon, colorful prize wheel with multiple segments, golden pointer, lucky spin concept, bright festive colors, 1024x1024",
+  "zey-win/Unstopable": "Unstopable racing game app icon, fast sports car, speed motion blur, neon lights, asphalt track, adrenaline action style, dark theme with bright accents, 1024x1024",
+  "zey-win/SlotSpot": "Slot machine game app icon, classic slot machine with lucky 7s, cherries, golden bells, BAR symbols, bright neon casino style, 1024x1024"
+};
 
-function requireOpenAiKey() {
-  const key = safeString(process.env.OPENAI_API_KEY);
-  if (!key) {
-    const error = new Error("Server is missing OPENAI_API_KEY.");
-    error.statusCode = 500;
-    throw error;
-  }
-  return key;
-}
+async function generateImage(prompt) {
+  const keys = [process.env.OPENAI_API_KEY_1, process.env.OPENAI_API_KEY_2].filter(Boolean);
+  let lastError = null;
 
-function cleanPrompt(value) {
-  return safeString(value)
-    .replace(/\s+/g, " ")
-    .slice(0, 1200);
-}
+  for (const key of keys) {
+    try {
+      const response = await fetch("https://api.openai.com/v1/images/generations", {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${key}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          model: "dall-e-3",
+          prompt: prompt,
+          n: 1,
+          size: "1024x1024",
+          response_format: "b64_json"
+        })
+      });
 
-function buildIconPrompt(payload) {
-  const appName = cleanPrompt(payload.app_name || payload.appName || "Android game");
-  const repository = cleanPrompt(payload.game_repository || payload.repository || "Unity game");
-  const description = cleanPrompt(payload.description || "");
-  const style = cleanPrompt(payload.style || "premium mobile game icon, vibrant, readable at small size");
+      if (!response.ok) {
+        const errText = await response.text().catch(() => "");
+        lastError = `OpenAI error ${response.status}: ${errText}`;
+        if (response.status !== 429 && response.status !== 500) break;
+        continue;
+      }
 
-  return [
-    `Create a polished 512x512 Android launcher icon for the Unity game "${appName}".`,
-    `Game template: ${repository}.`,
-    description ? `Game description: ${description}.` : "",
-    `Style: ${style}.`,
-    "Use a single strong centered symbol, high contrast, no tiny text, no UI screenshots, no white Unity logo overlay.",
-    "Square composition, rounded-safe margins, production app store quality."
-  ].filter(Boolean).join(" ");
-}
-
-async function generateIconBase64(prompt) {
-  const response = await fetch("https://api.openai.com/v1/images/generations", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${requireOpenAiKey()}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: process.env.OPENAI_IMAGE_MODEL || "gpt-image-1",
-      prompt,
-      size: process.env.OPENAI_IMAGE_SIZE || DEFAULT_SIZE
-    })
-  });
-
-  const data = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    const error = new Error(data.error?.message || `OpenAI image generation failed: ${response.status}`);
-    error.statusCode = response.status;
-    error.details = data;
-    throw error;
+      const data = await response.json();
+      if (data.data && data.data[0] && data.data[0].b64_json) {
+        return `data:image/png;base64,${data.data[0].b64_json}`;
+      }
+      lastError = "Invalid response format from OpenAI";
+    } catch (err) {
+      lastError = err.message;
+    }
   }
 
-  const base64 = data.data?.[0]?.b64_json;
-  if (!base64) {
-    const error = new Error("OpenAI did not return image data.");
-    error.statusCode = 502;
-    error.details = data;
-    throw error;
-  }
-  return base64;
+  throw new Error(lastError || "All API keys failed");
 }
 
 module.exports = async function handler(req, res) {
@@ -83,16 +69,31 @@ module.exports = async function handler(req, res) {
     }
 
     requireOperator(req);
-    const payload = await readJson(req, 32_000);
-    const prompt = buildIconPrompt(payload);
-    const base64 = await generateIconBase64(prompt);
+
+    const payload = await readJson(req);
+    const repo = safeString(payload.game_repository || payload.repository);
+    const customPrompt = safeString(payload.prompt);
+
+    if (!customPrompt && !repo) {
+      sendJson(req, res, 400, { ok: false, error: "Provide game_repository or prompt." });
+      return;
+    }
+
+    const prompt = customPrompt || PROMPTS[repo];
+    if (!prompt) {
+      sendJson(req, res, 400, { ok: false, error: `No default prompt for ${repo}. Provide custom prompt.` });
+      return;
+    }
+
+    const dataUrl = await generateImage(prompt);
 
     sendJson(req, res, 200, {
       ok: true,
+      repository: repo || "custom",
       prompt,
       icon: {
-        path: "Assets/ZeyWin/IconOverride/android-icon.png",
-        dataUrl: `data:image/png;base64,${base64}`
+        dataUrl,
+        source: "openai-dall-e-3"
       }
     });
   } catch (error) {
