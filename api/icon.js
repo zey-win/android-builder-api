@@ -164,7 +164,7 @@ async function findIcon(repo, ref, explicitPath) {
     } catch (e) { if (e.statusCode !== 404) throw e; }
   }
 
-  // Then try repo-specific known paths (from Unity projects)
+  // Then try repo-specific known paths with download_url fallback for LFS
   const REPO_KNOWN_PATHS = {
     "zey-win/plinko": ["Assets/ZeyWin/IconOverride/android-icon.png", "Assets/Sprites/Icon.png"],
     "zey-win/blackjack": ["Assets/Sprites/icon.png"],
@@ -175,6 +175,18 @@ async function findIcon(repo, ref, explicitPath) {
     "zey-win/Unstopable": ["Assets/Art/icon.png", "Assets/Art/icon2.png"],
     "zey-win/SlotSpot": ["Assets/ZeyWin/IconOverride/android-icon.png"]
   };
+  // Direct download URLs for LFS files (use download_url from GitHub API)
+  const REPO_LFS_DOWNLOADS = {
+    "zey-win/blackjack": ["https://github.com/zey-win/blackjack/raw/main/Assets/Sprites/icon.png"],
+    "zey-win/Unstopable": ["https://github.com/zey-win/Unstopable/raw/main/Assets/Art/icon.png"],
+    "zey-win/dragon-tiger": ["https://github.com/zey-win/dragon-tiger/raw/main/Assets/UI/Dragon%20Tiger%20Icon.png"],
+    "zey-win/baccarat-tiger": ["https://github.com/zey-win/baccarat-tiger/raw/main/Assets/UI/Dragon%20Tiger%20Icon.png"]
+  };
+  const lfsUrls = REPO_LFS_DOWNLOADS[repo] || [];
+  for (const url of lfsUrls) {
+    const dataUrl = await fetchPngDataUrl(url);
+    if (dataUrl) return { path: "lfs-icon.png", dataUrl, source: "lfs-download" };
+  }
   const repoPaths = dedupe([...(REPO_KNOWN_PATHS[repo] || []), ...STATIC_ICON_CANDIDATES]);
   for (const path of repoPaths) {
     try {
