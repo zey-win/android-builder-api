@@ -344,14 +344,15 @@ module.exports = async function handler(req, res) {
     let iconPath = safeString(payload.icon_png_path);
 
     if (iconBuffer) {
-      const iconName = `Assets/BuildIcon/${requestId}.png`;
+      const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      const iconName = `builds/icons/${requestId}.png`;
       iconResult = await commitIcon({
-        repo: gameRepository,
-        branch: gameRef,
+        repo: ciRepo,
+        branch: "main",
         iconPath: iconName,
         iconBuffer
       });
-      iconPath = iconName;
+      iconPath = `https://raw.githubusercontent.com/${ciRepo}/main/${iconName}`;
     }
 
     if (firebaseFile) {
