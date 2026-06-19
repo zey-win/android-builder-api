@@ -197,6 +197,7 @@ async function findIcon(repo, ref, explicitPath) {
   };
   // Direct download URLs for LFS files (use download_url from GitHub API)
   const REPO_LFS_DOWNLOADS = {
+    "zey-win/plinko": ["https://github.com/zey-win/plinko/raw/main/Assets/IconOverride/plinko-falling-balls-icon.png"],
     "zey-win/blackjack": ["https://github.com/zey-win/blackjack/raw/main/Assets/Sprites/icon.png"],
     "zey-win/Unstopable": ["https://github.com/zey-win/Unstopable/raw/main/Assets/Art/icon.png"],
     "zey-win/dragon-tiger": ["https://github.com/zey-win/dragon-tiger/raw/main/Assets/UI/Dragon%20Tiger%20Icon.png"]
