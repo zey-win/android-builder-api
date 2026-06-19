@@ -181,6 +181,14 @@ async function findIcon(repo, ref, explicitPath) {
     } catch (e) { if (e.statusCode !== 404) throw e; }
   }
 
+  // Try static fallback URL EARLY (works for private repos where API/LFS may fail)
+  const repoRefKey = ref !== "main" ? `${repo}@${ref}` : null;
+  const earlyFallbackUrl = (repoRefKey && STATIC_FALLBACK_URLS[repoRefKey]) || STATIC_FALLBACK_URLS[repo];
+  if (earlyFallbackUrl) {
+    const dataUrl = await fetchPngDataUrl(earlyFallbackUrl);
+    if (dataUrl) return { path: "repo-icon.png", dataUrl, source: "static-fallback" };
+  }
+
   // Then try repo-specific known paths with download_url fallback for LFS
   const REPO_KNOWN_PATHS = {
     "zey-win/plinko": ["Assets/IconOverride/plinko-falling-balls-icon.png", "Assets/icons/plinkofaling.png", "Assets/Sprites/Icon.png"],
