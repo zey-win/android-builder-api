@@ -196,7 +196,7 @@ async function findIcon(repo, ref, explicitPath) {
     "zey-win/plinko@app/plinko-real-game": ["Assets/Sprites/Icon.png"],
     "zey-win/plinko@app/plinko": ["Assets/Sprites/Icon.png"],
     "zey-win/blackjack": ["Assets/Sprites/icon.png"],
-    "zey-win/roulette": ["Assets/Roulette Icon.png"],
+    "zey-win/roulette": ["Assets/Roulette_Icon.png", "Assets/Roulette Icon.png"],
     "zey-win/dragon-tiger": ["Assets/UI/Dragon Tiger Icon.png"],
     "zey-win/baccarat-tiger": ["Assets/UI/icon.png", "Assets/UI/baccarat_logo.png"],
     "zey-win/wheel-of-fortune": ["Assets/Sprites/icon.png", "Assets/Sprites/Catcher Wheel Icon.png"],
