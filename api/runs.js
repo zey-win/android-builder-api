@@ -34,8 +34,20 @@ async function findByRequestId(requestId) {
     createdAt: run.created_at,
     updatedAt: run.updated_at,
     htmlUrl: run.html_url,
-    displayTitle: run.display_title || run.name
+    displayTitle: run.display_title || run.name,
+    requestId,
+    iconUrl: buildIconUrl(requestId)
   };
+}
+
+function extractRequestId(title) {
+  const match = String(title || "").match(/builder-([a-z0-9]+)/);
+  return match ? match[1] : null;
+}
+
+function buildIconUrl(requestId) {
+  if (!requestId) return null;
+  return `https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/icons/${requestId}.png`;
 }
 
 async function listRecentRuns() {
@@ -56,7 +68,10 @@ async function listRecentRuns() {
     })
     .slice(0, 50);
 
-  return filtered.map((run) => ({
+  return filtered.map((run) => {
+    const title = `${run.display_title || ""} ${run.name || ""}`;
+    const requestId = extractRequestId(title);
+    return {
     id: run.id,
     runNumber: run.run_number,
     runAttempt: run.run_attempt,
@@ -65,8 +80,11 @@ async function listRecentRuns() {
     createdAt: run.created_at,
     updatedAt: run.updated_at,
     htmlUrl: run.html_url,
-    displayTitle: run.display_title || run.name
-  }));
+    displayTitle: run.display_title || run.name,
+    requestId,
+    iconUrl: buildIconUrl(requestId)
+  };
+  });
 }
 
 module.exports = async function handler(req, res) {
