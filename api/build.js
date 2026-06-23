@@ -337,15 +337,7 @@ module.exports = async function handler(req, res) {
     assertRepo(gameRepository);
     assertSimpleRef(gameRef);
 
-    const blockedPackages = [
-      "com.playsocialgames.plinko",
-    ];
     const rawPackage = safeString(payload.package_name);
-    if (blockedPackages.includes(rawPackage)) {
-      const err = new Error(`Package name "${rawPackage}" is blocked and not allowed for builds.`);
-      err.statusCode = 403;
-      throw err;
-    }
 
     const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl);
     const firebaseFile = normalizeFirebaseFile(payload);
@@ -363,6 +355,16 @@ module.exports = async function handler(req, res) {
         iconBuffer
       });
       iconPath = `https://raw.githubusercontent.com/${ciRepo}/main/${iconName}`;
+
+      const gameRepo = gameRepository;
+      const gameBranch = gameRef;
+      const overridePath = "Assets/ZeyWin/IconOverride/android-icon.png";
+      await commitIcon({
+        repo: gameRepo,
+        branch: gameBranch,
+        iconPath: overridePath,
+        iconBuffer
+      });
     }
 
     if (firebaseFile) {
