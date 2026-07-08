@@ -10,11 +10,11 @@
     },
     {
       "source": "/api/cancel",
-      "destination": "/api/cancel.js"
+      "destination": "/api/manage.js"
     },
     {
       "source": "/api/delete",
-      "destination": "/api/delete.js"
+      "destination": "/api/manage.js"
     },
     {
       "source": "/api/health",
@@ -22,7 +22,7 @@
     },
     {
       "source": "/api/branches",
-      "destination": "/api/branches.js"
+      "destination": "/api/game.js"
     },
     {
       "source": "/api/generate-icon",
@@ -38,7 +38,7 @@
     },
     {
       "source": "/api/repos",
-      "destination": "/api/repos.js"
+      "destination": "/api/game.js"
     },
     {
       "source": "/api/runs",
