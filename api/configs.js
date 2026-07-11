@@ -27,7 +27,11 @@ async function loadConfigs() {
     }
     if (text) {
       const parsed = JSON.parse(text);
-      return { configs: Array.isArray(parsed.configs) ? parsed.configs : [], sha: data.sha };
+      return {
+        configs: Array.isArray(parsed.configs) ? parsed.configs : [],
+        deleted: Array.isArray(parsed.deleted) ? parsed.deleted : [],
+        sha: data.sha
+      };
     }
   } catch (err) {
     if (err.statusCode !== 404) {
@@ -35,10 +39,10 @@ async function loadConfigs() {
       console.error("loadConfigs failed", err && err.message);
     }
   }
-  return { configs: [], sha: null };
+  return { configs: [], deleted: [], sha: null };
 }
 
-async function saveConfigs(configs, sha) {
+async function saveConfigs(configs, sha, deleted = []) {
   let curSha = sha;
   if (!curSha) {
     try {
@@ -50,7 +54,7 @@ async function saveConfigs(configs, sha) {
   }
   // Strip heavy icon data so configs.json stays small and readable via the API
   const clean = stripIcons(configs);
-  const content = Buffer.from(JSON.stringify({ configs: clean }, null, 2)).toString("base64");
+  const content = Buffer.from(JSON.stringify({ configs: clean, deleted }, null, 2)).toString("base64");
   const body = {
     message: "console: update configs",
     content,
@@ -68,8 +72,8 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const { configs } = await loadConfigs();
-      sendJson(req, res, 200, { ok: true, configs });
+      const { configs, deleted } = await loadConfigs();
+      sendJson(req, res, 200, { ok: true, configs, deleted });
       return;
     }
 
@@ -78,26 +82,29 @@ module.exports = async function handler(req, res) {
       const incoming = Array.isArray(body.configs)
         ? body.configs
         : (body.config ? [body.config] : []);
-      const { configs, sha } = await loadConfigs();
+      const deletedIncoming = Array.isArray(body.deleted) ? body.deleted : [];
+      const { configs, sha, deleted } = await loadConfigs();
       const map = new Map(configs.map((c) => [c.id, c]));
       for (const c of incoming) {
         if (c && c.id) map.set(c.id, c);
       }
+      // Honor deletions pushed from other devices
+      for (const delId of deletedIncoming) map.delete(delId);
       const merged = [...map.values()];
-      await saveConfigs(merged, sha);
-      sendJson(req, res, 200, { ok: true, configs: merged });
+      const newDeleted = Array.from(new Set([...deleted, ...deletedIncoming]));
+      await saveConfigs(merged, sha, newDeleted);
+      sendJson(req, res, 200, { ok: true, configs: merged, deleted: newDeleted });
       return;
     }
 
     if (req.method === "DELETE") {
       const body = await readJson(req);
       const id = safeString(body.id);
-      const { configs, sha } = await loadConfigs();
+      const { configs, sha, deleted } = await loadConfigs();
       const filtered = configs.filter((c) => c.id !== id);
-      if (filtered.length !== configs.length) {
-        await saveConfigs(filtered, sha);
-      }
-      sendJson(req, res, 200, { ok: true, configs: filtered });
+      const newDeleted = deleted.includes(id) ? deleted : [...deleted, id];
+      await saveConfigs(filtered, sha, newDeleted);
+      sendJson(req, res, 200, { ok: true, configs: filtered, deleted: newDeleted });
       return;
     }
 
