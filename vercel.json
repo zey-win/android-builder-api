@@ -13,6 +13,10 @@
       "destination": "/api/manage.js"
     },
     {
+      "source": "/api/configs",
+      "destination": "/api/configs.js"
+    },
+    {
       "source": "/api/delete",
       "destination": "/api/manage.js"
     },
