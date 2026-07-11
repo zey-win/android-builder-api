@@ -2,7 +2,6 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
-  parseKeyValueText,
   readJson,
   safeString,
   sendJson
@@ -11,18 +10,29 @@ const {
 const CONFIG_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
 const CONFIG_PATH = "configs.json";
 
+function stripIcons(configs) {
+  return configs.map(({ icon_data_url, ...rest }) => rest);
+}
+
 async function loadConfigs() {
   try {
     const data = await githubFetch(`/repos/${CONFIG_REPO}/contents/${CONFIG_PATH}`);
+    let text = null;
     if (data && data.content) {
-      const text = Buffer.from(data.content, "base64").toString("utf8");
+      text = Buffer.from(data.content, "base64").toString("utf8");
+    } else if (data && data.download_url) {
+      // File may exceed GitHub's 1MB inline limit; fetch the raw content instead
+      const raw = await fetch(data.download_url);
+      if (raw.ok) text = await raw.text();
+    }
+    if (text) {
       const parsed = JSON.parse(text);
       return { configs: Array.isArray(parsed.configs) ? parsed.configs : [], sha: data.sha };
     }
   } catch (err) {
     if (err.statusCode !== 404) {
       // eslint-disable-next-line no-console
-      console.error("loadConfigs failed", err.message);
+      console.error("loadConfigs failed", err && err.message);
     }
   }
   return { configs: [], sha: null };
@@ -38,7 +48,9 @@ async function saveConfigs(configs, sha) {
       if (e.statusCode !== 404) throw e;
     }
   }
-  const content = Buffer.from(JSON.stringify({ configs }, null, 2)).toString("base64");
+  // Strip heavy icon data so configs.json stays small and readable via the API
+  const clean = stripIcons(configs);
+  const content = Buffer.from(JSON.stringify({ configs: clean }, null, 2)).toString("base64");
   const body = {
     message: "console: update configs",
     content,
