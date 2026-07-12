@@ -329,7 +329,20 @@ module.exports = async function handler(req, res) {
     assertRepo(gameRepository);
     assertSimpleRef(gameRef);
 
-    const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl);
+    const packageName = safeString(payload.package_name);
+    const appName = safeString(payload.app_name);
+    if (!packageName) {
+      const error = new Error("Package name is required to start a build. Set the Package Name (e.g. com.example.app) before building.");
+      error.statusCode = 400;
+      throw error;
+    }
+    if (!appName) {
+      const error = new Error("App name is required to start a build. Set the App name before building.");
+      error.statusCode = 400;
+      throw error;
+    }
+
+    const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl || payload.icon_png_path);
     const firebaseFile = normalizeFirebaseFile(payload);
     let iconResult = null;
     let firebaseResult = null;

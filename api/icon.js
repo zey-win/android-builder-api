@@ -53,6 +53,35 @@ const STATIC_FALLBACK_URLS = {
   "zey-win/ci-cd": "https://zey-wingithubio.vercel.app/repo-icons/zey-win__plinko.png"
 };
 
+const STATIC_ICON_BASE = "https://zey-wingithubio.vercel.app/repo-icons/";
+
+// Per-app static icons for configs that share the same game repository
+// (e.g. multiple Plinko apps all use zey-win/plinko but need distinct icons).
+const STATIC_ICON_BY_PACKAGE = {
+  "com.socialapps.plinko": "com.socialapps.plinko.png",
+  "com.playsocialgames.plinkofun": "com.playsocialgames.plinkofun.png",
+  "com.falling.plinko": "com.falling.plinko.png",
+  "com.luckypli.plinko": "icoplindrop.png"
+};
+
+const STATIC_ICON_BY_APP = {
+  "plinko": "com.socialapps.plinko.png",
+  "plinko: real money": "com.playsocialgames.plinkofun.png",
+  "plinko falling balls": "com.falling.plinko.png",
+  "lucky plinko": "icoplindrop.png"
+};
+
+async function resolveStaticPerAppIcon({ packageName, appName, iconUrl }) {
+  let file = "";
+  if (iconUrl) return iconUrl.startsWith("http") ? iconUrl : `${STATIC_ICON_BASE}${iconUrl}`;
+  if (packageName && STATIC_ICON_BY_PACKAGE[packageName.toLowerCase()]) {
+    file = STATIC_ICON_BY_PACKAGE[packageName.toLowerCase()];
+  } else if (appName && STATIC_ICON_BY_APP[appName.toLowerCase()]) {
+    file = STATIC_ICON_BY_APP[appName.toLowerCase()];
+  }
+  return file ? `${STATIC_ICON_BASE}${file}` : "";
+}
+
 function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
@@ -172,7 +201,18 @@ async function listScoredTreeCandidates(repo, ref) {
   }
 }
 
-async function findIcon(repo, ref, explicitPath) {
+async function findIcon(repo, ref, explicitPath, opts = {}) {
+  // Per-app/per-config static icon (used when several configs share one repo)
+  const perAppUrl = await resolveStaticPerAppIcon({
+    packageName: opts.packageName,
+    appName: opts.appName,
+    iconUrl: opts.iconUrl
+  });
+  if (perAppUrl) {
+    const dataUrl = await fetchPngDataUrl(perAppUrl);
+    if (dataUrl) return { path: "static-per-app.png", dataUrl, source: "static-per-app" };
+  }
+
   // Try explicit path first
   if (explicitPath) {
     try {
@@ -246,10 +286,13 @@ module.exports = async function handler(req, res) {
     const repo = safeString(req.query?.game_repository || req.query?.repository);
     const ref = safeString(req.query?.game_ref || req.query?.ref, "main");
     const explicitPath = safeString(req.query?.icon_path);
+    const packageName = safeString(req.query?.package_name);
+    const appName = safeString(req.query?.app_name);
+    const iconUrl = safeString(req.query?.icon_url);
     assertRepo(repo);
     assertSimpleRef(ref);
 
-    const icon = await findIcon(repo, ref, explicitPath);
+    const icon = await findIcon(repo, ref, explicitPath, { packageName, appName, iconUrl });
     sendJson(req, res, 200, {
       ok: true,
       repository: repo,
