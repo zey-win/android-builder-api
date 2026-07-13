@@ -115,6 +115,41 @@ function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+async function commitIconToCiCd({ requestId, buffer }) {
+  const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const ciRef = process.env.CI_REF || "main";
+  const path = `builds/icons/builder-${requestId}.png`;
+  const encodedPath = encodeContentPath(path);
+
+  let existingSha = null;
+  try {
+    const existing = await githubFetch(`/repos/${ciRepo}/contents/${encodedPath}?ref=${encodeURIComponent(ciRef)}`);
+    existingSha = existing.sha || null;
+  } catch (error) {
+    if (error.statusCode !== 404) {
+      throw error;
+    }
+  }
+
+  const body = {
+    message: `Android builder icon for ${requestId}`,
+    content: buffer.toString("base64"),
+    branch: ciRef
+  };
+
+  if (existingSha) {
+    body.sha = existingSha;
+  }
+
+  const result = await githubFetch(`/repos/${ciRepo}/contents/${encodedPath}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+
+  return `https://raw.githubusercontent.com/${ciRepo}/${ciRef}/${path}`;
+}
+
 async function commitFile({ repo, branch, filePath, buffer, message }) {
   const encodedPath = encodeContentPath(filePath);
   let existingSha = null;
@@ -316,6 +351,7 @@ module.exports = async function handler(req, res) {
     let iconPath = safeString(payload.icon_png_path);
 
     const GITHUB_INPUT_LIMIT = 60000;
+    const ICON_INLINE_LIMIT = 40000;
 
     // Pass firebase as base64
     let firebaseBase64 = "";
@@ -336,15 +372,25 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Pass icon as base64 only if combined size fits GitHub workflow input limit
+    // Pass icon: small icons inline as base64 (fast, no CDN delay); large icons
+    // are committed to ci-cd and passed by raw URL so they survive GitHub's
+    // ~50KB workflow_dispatch input limit.
     let iconPngBase64 = "";
+    let iconPngPath = "";
     const iconRaw = payload.icon_png_base64 || payload.iconDataUrl || "";
     if (iconRaw && !iconRaw.startsWith("http")) {
       const iconBuffer = normalizePng(iconRaw);
       if (iconBuffer) {
         const encoded = iconBuffer.toString("base64");
-        if (firebaseBase64.length + encoded.length < GITHUB_INPUT_LIMIT) {
+        if (encoded.length < ICON_INLINE_LIMIT) {
           iconPngBase64 = encoded;
+        } else {
+          try {
+            iconPngPath = await commitIconToCiCd({ requestId, buffer: iconBuffer });
+          } catch (err) {
+            // eslint-disable-next-line no-console
+            console.error("Large icon commit failed:", err && err.message);
+          }
         }
       }
     }
@@ -356,9 +402,10 @@ module.exports = async function handler(req, res) {
         game_repository: gameRepository,
         game_ref: gameRef,
         firebase_json_base64: firebaseBase64,
-        icon_png_base64: iconPngBase64
+        icon_png_base64: iconPngBase64,
+        icon_png_path: iconPngPath
       },
-      iconPath
+      iconPngPath || iconPath
     );
 
     if (!iconResult && iconRaw) {
