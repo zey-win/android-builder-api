@@ -318,8 +318,11 @@ module.exports = async function handler(req, res) {
     // Pass icon as base64 only if small enough for GitHub workflow input (~60KB limit)
     let iconPngBase64 = "";
     const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl || payload.icon_png_path);
-    if (iconBuffer && iconBuffer.length < 60000) {
-      iconPngBase64 = iconBuffer.toString("base64");
+    if (iconBuffer) {
+      const encoded = iconBuffer.toString("base64");
+      if (encoded.length < 60000) {
+        iconPngBase64 = encoded;
+      }
     }
 
     if (firebaseFile) {
@@ -344,7 +347,8 @@ module.exports = async function handler(req, res) {
         builder_request_id: requestId,
         game_repository: gameRepository,
         game_ref: gameRef,
-        firebase_json_base64: firebaseFile ? firebaseFile.buffer.toString("base64") : ""
+        firebase_json_base64: firebaseFile ? firebaseFile.buffer.toString("base64") : "",
+        icon_png_base64: iconPngBase64
       },
       iconPath
     );
