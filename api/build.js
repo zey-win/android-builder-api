@@ -114,57 +114,6 @@ function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-async function ensureBranch(repo, branch, fromBranch = "main") {
-  try {
-    await githubFetch(`/repos/${repo}/branches/${encodeURIComponent(branch)}`);
-    return;
-  } catch (error) {
-    if (error.statusCode !== 404) throw error;
-  }
-  const mainRef = await githubFetch(`/repos/${repo}/git/refs/heads/${encodeURIComponent(fromBranch)}`);
-  await githubFetch(`/repos/${repo}/git/refs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: mainRef.object.sha })
-  });
-}
-
-async function commitIcon({ repo, branch, iconPath, iconBuffer }) {
-  const encodedPath = encodeContentPath(iconPath);
-  let existingSha = null;
-
-  try {
-    const existing = await githubFetch(`/repos/${repo}/contents/${encodedPath}?ref=${encodeURIComponent(branch)}`);
-    existingSha = existing.sha || null;
-  } catch (error) {
-    if (error.statusCode !== 404) {
-      throw error;
-    }
-  }
-
-  const body = {
-    message: `Update Android builder icon (${iconPath})`,
-    content: iconBuffer.toString("base64"),
-    branch
-  };
-
-  if (existingSha) {
-    body.sha = existingSha;
-  }
-
-  const result = await githubFetch(`/repos/${repo}/contents/${encodedPath}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-
-  return {
-    path: iconPath,
-    commitSha: result.commit?.sha || null,
-    htmlUrl: result.content?.html_url || null
-  };
-}
-
 async function commitFile({ repo, branch, filePath, buffer, message }) {
   const encodedPath = encodeContentPath(filePath);
   let existingSha = null;
@@ -365,27 +314,6 @@ module.exports = async function handler(req, res) {
     let firebaseResult = null;
     let iconPath = safeString(payload.icon_png_path);
 
-    if (iconBuffer) {
-      const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-      const iconBranch = process.env.ICON_BRANCH || "builder-icons";
-      const iconName = `builds/icons/${requestId}.png`;
-      try {
-        await ensureBranch(ciRepo, iconBranch);
-        iconResult = await commitIcon({
-          repo: ciRepo,
-          branch: iconBranch,
-          iconPath: iconName,
-          iconBuffer
-        });
-        iconPath = `https://raw.githubusercontent.com/${ciRepo}/${iconBranch}/${iconName}`;
-      } catch (err) {
-        // eslint-disable-next-line no-console
-        console.error("Icon commit failed (protected branch?):", err && err.message);
-        iconResult = null;
-        iconPath = safeString(payload.icon_png_path);
-      }
-    }
-
     if (firebaseFile) {
       try {
         firebaseResult = await commitFile({
@@ -407,7 +335,8 @@ module.exports = async function handler(req, res) {
         ...payload,
         builder_request_id: requestId,
         game_repository: gameRepository,
-        game_ref: gameRef
+        game_ref: gameRef,
+        firebase_json_base64: firebaseFile ? firebaseFile.buffer.toString("base64") : ""
       },
       iconPath
     );
