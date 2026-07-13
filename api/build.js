@@ -361,6 +361,10 @@ module.exports = async function handler(req, res) {
       iconPath
     );
 
+    if (!iconResult && iconRaw) {
+      iconResult = { dataUrl: iconRaw.startsWith("data:") ? iconRaw : `data:image/png;base64,${iconRaw}` };
+    }
+
     const dispatchStartedAt = new Date();
     const dispatch = await dispatchWorkflow(inputs);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt });
