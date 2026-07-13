@@ -161,7 +161,7 @@ function buildWorkflowInputs(payload, iconPath) {
     package_name: safeString(payload.package_name),
     app_name: safeString(payload.app_name),
     icon_png_path: iconPath || safeString(payload.icon_png_path),
-    icon_png_base64: safeString(payload.icon_png_base64 || payload.iconDataUrl),
+    icon_png_base64: safeString(payload.icon_png_base64),
     zeywin_api_key: safeString(payload.zeywin_api_key),
     zeywin_sdk_version: safeString(payload.zeywin_sdk_version),
     version_mode: safeString(payload.version_mode, "auto_next"),
@@ -176,7 +176,7 @@ function buildWorkflowInputs(payload, iconPath) {
     admob_android_banner_id: safeString(payload.admob_android_banner_id),
     admob_android_interstitial_id: safeString(payload.admob_android_interstitial_id),
     admob_android_rewarded_id: safeString(payload.admob_android_rewarded_id),
-    firebase_json_base64: safeString(payload.firebase_json_base64 || payload.firebaseJsonBase64)
+    firebase_json_base64: safeString(payload.firebase_json_base64)
   };
 
   return Object.fromEntries(WORKFLOW_INPUT_KEYS.map((key) => [key, inputs[key] || ""]));
