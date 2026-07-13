@@ -38,7 +38,8 @@ const WORKFLOW_INPUT_KEYS = [
   "admob_android_app_id",
   "admob_android_banner_id",
   "admob_android_interstitial_id",
-  "admob_android_rewarded_id"
+  "admob_android_rewarded_id",
+  "firebase_json_base64"
 ];
 
 function normalizePng(value) {
@@ -223,7 +224,8 @@ function buildWorkflowInputs(payload, iconPath) {
     admob_android_app_id: safeString(payload.admob_android_app_id),
     admob_android_banner_id: safeString(payload.admob_android_banner_id),
     admob_android_interstitial_id: safeString(payload.admob_android_interstitial_id),
-    admob_android_rewarded_id: safeString(payload.admob_android_rewarded_id)
+    admob_android_rewarded_id: safeString(payload.admob_android_rewarded_id),
+    firebase_json_base64: safeString(payload.firebase_json_base64 || payload.firebaseJsonBase64)
   };
 
   return Object.fromEntries(WORKFLOW_INPUT_KEYS.map((key) => [key, inputs[key] || ""]));
