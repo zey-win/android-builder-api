@@ -359,7 +359,7 @@ module.exports = async function handler(req, res) {
       });
       const apiOrigin = process.env.API_BASE_URL
         || `https://${req.headers.host}`;
-      iconPath = `${apiOrigin}/api/icon-file/${requestId}.png`;
+      iconPath = `${apiOrigin}/api/icon-file?name=${encodeURIComponent(requestId + ".png")}`;
     }
 
     if (firebaseFile) {
