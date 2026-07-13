@@ -315,17 +315,12 @@ module.exports = async function handler(req, res) {
     let firebaseResult = null;
     let iconPath = safeString(payload.icon_png_path);
 
-    // Pass icon as base64 only if small enough for GitHub workflow input (~60KB limit)
-    let iconPngBase64 = "";
-    const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl || payload.icon_png_path);
-    if (iconBuffer) {
-      const encoded = iconBuffer.toString("base64");
-      if (encoded.length < 60000) {
-        iconPngBase64 = encoded;
-      }
-    }
+    const GITHUB_INPUT_LIMIT = 60000;
 
+    // Pass firebase as base64
+    let firebaseBase64 = "";
     if (firebaseFile) {
+      firebaseBase64 = firebaseFile.buffer.toString("base64");
       try {
         firebaseResult = await commitFile({
           repo: gameRepository,
@@ -341,13 +336,26 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Pass icon as base64 only if combined size fits GitHub workflow input limit
+    let iconPngBase64 = "";
+    const iconRaw = payload.icon_png_base64 || payload.iconDataUrl || "";
+    if (iconRaw && !iconRaw.startsWith("http")) {
+      const iconBuffer = normalizePng(iconRaw);
+      if (iconBuffer) {
+        const encoded = iconBuffer.toString("base64");
+        if (firebaseBase64.length + encoded.length < GITHUB_INPUT_LIMIT) {
+          iconPngBase64 = encoded;
+        }
+      }
+    }
+
     const inputs = buildWorkflowInputs(
       {
         ...payload,
         builder_request_id: requestId,
         game_repository: gameRepository,
         game_ref: gameRef,
-        firebase_json_base64: firebaseFile ? firebaseFile.buffer.toString("base64") : "",
+        firebase_json_base64: firebaseBase64,
         icon_png_base64: iconPngBase64
       },
       iconPath
