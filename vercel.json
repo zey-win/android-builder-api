@@ -25,10 +25,6 @@
       "destination": "/api/health.js"
     },
     {
-      "source": "/api/icon-file",
-      "destination": "/api/icon-file.js"
-    },
-    {
       "source": "/api/branches",
       "destination": "/api/game.js"
     },

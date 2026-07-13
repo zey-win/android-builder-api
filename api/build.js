@@ -357,9 +357,7 @@ module.exports = async function handler(req, res) {
         iconPath: iconName,
         iconBuffer
       });
-      const apiOrigin = process.env.API_BASE_URL
-        || `https://${req.headers.host}`;
-      iconPath = `${apiOrigin}/api/icon-file?name=${encodeURIComponent(requestId + ".png")}`;
+      iconPath = `https://raw.githubusercontent.com/${ciRepo}/main/${iconName}`;
     }
 
     if (firebaseFile) {
