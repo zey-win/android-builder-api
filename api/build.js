@@ -49,7 +49,7 @@ function normalizePng(value) {
 
   const base64 = raw.includes(",") ? raw.split(",").pop() : raw;
   const buffer = Buffer.from(base64, "base64");
-  if (buffer.length < 8 || buffer.subarray(0, 8).toString("hex") !== PNG_MAGIC) {
+  if (buffer.length < 33 || buffer.subarray(0, 8).toString("hex") !== PNG_MAGIC) {
     const error = new Error("Selected icon must be a PNG image.");
     error.statusCode = 400;
     throw error;
@@ -58,6 +58,22 @@ function normalizePng(value) {
   if (buffer.length > 2_500_000) {
     const error = new Error("Selected icon PNG is too large. Use a PNG below 2.5 MB.");
     error.statusCode = 413;
+    throw error;
+  }
+
+  // Validate IHDR chunk to ensure the PNG has reasonable dimensions
+  // (prevents corrupted/truncated PNGs that pass the magic-byte check)
+  const ihdrType = buffer.toString("ascii", 12, 16);
+  if (ihdrType !== "IHDR" || buffer.readUInt32BE(8) !== 13) {
+    const error = new Error("Selected icon PNG has a corrupted or missing header (IHDR).");
+    error.statusCode = 400;
+    throw error;
+  }
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  if (width < 48 || height < 48) {
+    const error = new Error(`Selected icon PNG is too small (${width}x${height}). Minimum is 48x48 pixels.`);
+    error.statusCode = 400;
     throw error;
   }
 

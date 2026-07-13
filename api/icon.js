@@ -95,7 +95,14 @@ function normalizePath(value) {
 }
 
 function isPng(buffer) {
-  return buffer.length >= 8 && buffer.subarray(0, 8).toString("hex") === PNG_MAGIC;
+  if (buffer.length < 33) return false;
+  if (buffer.subarray(0, 8).toString("hex") !== PNG_MAGIC) return false;
+  // Validate IHDR chunk to reject truncated/corrupted PNGs
+  const ihdrType = buffer.toString("ascii", 12, 16);
+  if (ihdrType !== "IHDR" || buffer.readUInt32BE(8) !== 13) return false;
+  const width = buffer.readUInt32BE(16);
+  const height = buffer.readUInt32BE(20);
+  return width >= 48 && height >= 48;
 }
 
 function scoreIconPath(path) {
