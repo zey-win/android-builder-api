@@ -113,6 +113,21 @@ function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
+async function ensureBranch(repo, branch, fromBranch = "main") {
+  try {
+    await githubFetch(`/repos/${repo}/branches/${encodeURIComponent(branch)}`);
+    return;
+  } catch (error) {
+    if (error.statusCode !== 404) throw error;
+  }
+  const mainRef = await githubFetch(`/repos/${repo}/git/refs/heads/${encodeURIComponent(fromBranch)}`);
+  await githubFetch(`/repos/${repo}/git/refs`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ ref: `refs/heads/${branch}`, sha: mainRef.object.sha })
+  });
+}
+
 async function commitIcon({ repo, branch, iconPath, iconBuffer }) {
   const encodedPath = encodeContentPath(iconPath);
   let existingSha = null;
@@ -350,24 +365,39 @@ module.exports = async function handler(req, res) {
 
     if (iconBuffer) {
       const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      const iconBranch = process.env.ICON_BRANCH || "builder-icons";
       const iconName = `builds/icons/${requestId}.png`;
-      iconResult = await commitIcon({
-        repo: ciRepo,
-        branch: "main",
-        iconPath: iconName,
-        iconBuffer
-      });
-      iconPath = `https://raw.githubusercontent.com/${ciRepo}/main/${iconName}`;
+      try {
+        await ensureBranch(ciRepo, iconBranch);
+        iconResult = await commitIcon({
+          repo: ciRepo,
+          branch: iconBranch,
+          iconPath: iconName,
+          iconBuffer
+        });
+        iconPath = `https://raw.githubusercontent.com/${ciRepo}/${iconBranch}/${iconName}`;
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Icon commit failed (protected branch?):", err && err.message);
+        iconResult = null;
+        iconPath = safeString(payload.icon_png_path);
+      }
     }
 
     if (firebaseFile) {
-      firebaseResult = await commitFile({
-        repo: gameRepository,
-        branch: gameRef,
-        filePath: firebaseFile.path,
-        buffer: firebaseFile.buffer,
-        message: `Update Android builder Firebase config (${firebaseFile.name})`
-      });
+      try {
+        firebaseResult = await commitFile({
+          repo: gameRepository,
+          branch: gameRef,
+          filePath: firebaseFile.path,
+          buffer: firebaseFile.buffer,
+          message: `Update Android builder Firebase config (${firebaseFile.name})`
+        });
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Firebase config commit failed (protected branch?):", err && err.message);
+        firebaseResult = null;
+      }
     }
 
     const inputs = buildWorkflowInputs(
