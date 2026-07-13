@@ -5,6 +5,10 @@
       "destination": "/api/artifacts.js"
     },
     {
+      "source": "/",
+      "destination": "/index.html"
+    },
+    {
       "source": "/api/build",
       "destination": "/api/build.js"
     },
