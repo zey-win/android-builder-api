@@ -25,6 +25,7 @@ const WORKFLOW_INPUT_KEYS = [
   "package_name",
   "app_name",
   "icon_png_path",
+  "icon_png_base64",
   "zeywin_api_key",
   "zeywin_sdk_version",
   "version_mode",
@@ -160,6 +161,7 @@ function buildWorkflowInputs(payload, iconPath) {
     package_name: safeString(payload.package_name),
     app_name: safeString(payload.app_name),
     icon_png_path: iconPath || safeString(payload.icon_png_path),
+    icon_png_base64: safeString(payload.icon_png_base64 || payload.iconDataUrl),
     zeywin_api_key: safeString(payload.zeywin_api_key),
     zeywin_sdk_version: safeString(payload.zeywin_sdk_version),
     version_mode: safeString(payload.version_mode, "auto_next"),
@@ -312,6 +314,13 @@ module.exports = async function handler(req, res) {
     let iconResult = null;
     let firebaseResult = null;
     let iconPath = safeString(payload.icon_png_path);
+
+    // Pass icon as base64 only if small enough for GitHub workflow input (~60KB limit)
+    let iconPngBase64 = "";
+    const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl || payload.icon_png_path);
+    if (iconBuffer && iconBuffer.length < 60000) {
+      iconPngBase64 = iconBuffer.toString("base64");
+    }
 
     if (firebaseFile) {
       try {
