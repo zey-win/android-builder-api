@@ -25,7 +25,6 @@ const WORKFLOW_INPUT_KEYS = [
   "package_name",
   "app_name",
   "icon_png_path",
-  "icon_png_base64",
   "zeywin_api_key",
   "zeywin_sdk_version",
   "version_mode",
@@ -161,7 +160,6 @@ function buildWorkflowInputs(payload, iconPath) {
     package_name: safeString(payload.package_name),
     app_name: safeString(payload.app_name),
     icon_png_path: iconPath || safeString(payload.icon_png_path),
-    icon_png_base64: safeString(payload.icon_png_base64 || payload.iconDataUrl),
     zeywin_api_key: safeString(payload.zeywin_api_key),
     zeywin_sdk_version: safeString(payload.zeywin_sdk_version),
     version_mode: safeString(payload.version_mode, "auto_next"),
@@ -310,7 +308,6 @@ module.exports = async function handler(req, res) {
       throw error;
     }
 
-    const iconBuffer = normalizePng(payload.icon_png_base64 || payload.iconDataUrl || payload.icon_png_path);
     const firebaseFile = normalizeFirebaseFile(payload);
     let iconResult = null;
     let firebaseResult = null;
