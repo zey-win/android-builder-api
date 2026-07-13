@@ -47,10 +47,6 @@
     {
       "source": "/api/runs",
       "destination": "/api/runs.js"
-    },
-    {
-      "source": "/api/versions",
-      "destination": "/api/versions.js"
     }
   ],
   "functions": {
