@@ -432,10 +432,12 @@ module.exports = async function handler(req, res) {
     const dispatch = await dispatchWorkflow(inputs);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt });
 
-    // Record build in centralized DB
+    // Record build in centralized DB (/api/configs = db.json)
     try {
-      const db = require("./db");
-      const { db: data, sha } = await db.loadDb();
+      const db = require("./configs");
+      const dataState = await db.loadDb();
+      const data = dataState.db;
+      const sha = dataState.sha;
       data.builds.push({
         run_id: run ? run.id : null,
         request_id: requestId,

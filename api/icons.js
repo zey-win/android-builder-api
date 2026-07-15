@@ -1,3 +1,5 @@
+// Delegates to /api/configs (centralized DB endpoint) for icon storage.
+// This file exists for backward compatibility (builder.js calls /api/icons).
 const {
   errorPayload,
   handleOptions,
@@ -5,7 +7,7 @@ const {
   safeString,
   sendJson
 } = require("./_shared");
-const db = require("./db");
+const configs = require("./configs");
 
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
@@ -13,13 +15,13 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const packageName = safeString(req.query && req.query.package_name);
-      const { db: data } = await db.loadDb();
+      const { db } = await configs.loadDb();
       if (packageName) {
-        const found = data.icons.find((i) => i.package_name === packageName) || null;
+        const found = db.icons.find((i) => i.package_name === packageName) || null;
         sendJson(req, res, 200, { ok: true, icon: found });
         return;
       }
-      sendJson(req, res, 200, { ok: true, icons: data.icons });
+      sendJson(req, res, 200, { ok: true, icons: db.icons });
       return;
     }
 
@@ -35,12 +37,12 @@ module.exports = async function handler(req, res) {
         sendJson(req, res, 400, { ok: false, error: "icon_data_url must be an image data URI." });
         return;
       }
-      const { db: data, sha } = await db.loadDb();
-      const idx = data.icons.findIndex((i) => i.package_name === packageName);
+      const { db, sha } = await configs.loadDb();
+      const idx = db.icons.findIndex((i) => i.package_name === packageName);
       const entry = { package_name: packageName, icon_data_url: iconDataUrl, updated_at: new Date().toISOString() };
-      if (idx >= 0) data.icons[idx] = entry;
-      else data.icons.push(entry);
-      await db.saveDb(data, sha);
+      if (idx >= 0) db.icons[idx] = entry;
+      else db.icons.push(entry);
+      await configs.saveDb(db, sha);
       sendJson(req, res, 200, { ok: true, icon: entry });
       return;
     }
@@ -52,10 +54,10 @@ module.exports = async function handler(req, res) {
         sendJson(req, res, 400, { ok: false, error: "package_name is required." });
         return;
       }
-      const { db: data, sha } = await db.loadDb();
-      data.icons = data.icons.filter((i) => i.package_name !== packageName);
-      await db.saveDb(data, sha);
-      sendJson(req, res, 200, { ok: true, icons: data.icons });
+      const { db, sha } = await configs.loadDb();
+      db.icons = db.icons.filter((i) => i.package_name !== packageName);
+      await configs.saveDb(db, sha);
+      sendJson(req, res, 200, { ok: true, icons: db.icons });
       return;
     }
 
