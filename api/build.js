@@ -432,6 +432,32 @@ module.exports = async function handler(req, res) {
     const dispatch = await dispatchWorkflow(inputs);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt });
 
+    // Record build in centralized DB
+    try {
+      const db = require("./db");
+      const { db: data, sha } = await db.loadDb();
+      data.builds.push({
+        run_id: run ? run.id : null,
+        request_id: requestId,
+        package_name: packageName,
+        app_name: appName,
+        game_repository: gameRepository,
+        build_format: inputs.build_format,
+        version_name: inputs.version_name,
+        version_code: inputs.version_code,
+        status: "queued",
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      });
+      if (iconPngBase64) {
+        const idx = data.icons.findIndex((i) => i.package_name === packageName);
+        const iconEntry = { package_name: packageName, icon_data_url: `data:image/png;base64,${iconPngBase64}`, icon_base64: iconPngBase64, updated_at: new Date().toISOString() };
+        if (idx >= 0) data.icons[idx] = iconEntry;
+        else data.icons.push(iconEntry);
+      }
+      await db.saveDb(data, sha);
+    } catch (_e) { /* non-critical */ }
+
     sendJson(req, res, 200, {
       ok: true,
       requestId,

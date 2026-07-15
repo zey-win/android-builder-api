@@ -1,79 +1,26 @@
 const {
   errorPayload,
-  githubFetch,
   handleOptions,
   readJson,
   safeString,
   sendJson
 } = require("./_shared");
+const db = require("./db");
 
 const CONFIG_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
-const CONFIG_PATH = "configs.json";
-
-function stripIcons(configs) {
-  return configs.map(({ icon_data_url, ...rest }) => rest);
-}
-
-async function loadConfigs() {
-  try {
-    const data = await githubFetch(`/repos/${CONFIG_REPO}/contents/${CONFIG_PATH}`);
-    let text = null;
-    if (data && data.content) {
-      text = Buffer.from(data.content, "base64").toString("utf8");
-    } else if (data && data.download_url) {
-      // File may exceed GitHub's 1MB inline limit; fetch the raw content instead
-      const raw = await fetch(data.download_url);
-      if (raw.ok) text = await raw.text();
-    }
-    if (text) {
-      const parsed = JSON.parse(text);
-      return {
-        configs: Array.isArray(parsed.configs) ? parsed.configs : [],
-        deleted: Array.isArray(parsed.deleted) ? parsed.deleted : [],
-        sha: data.sha
-      };
-    }
-  } catch (err) {
-    if (err.statusCode !== 404) {
-      // eslint-disable-next-line no-console
-      console.error("loadConfigs failed", err && err.message);
-    }
-  }
-  return { configs: [], deleted: [], sha: null };
-}
-
-async function saveConfigs(configs, sha, deleted = []) {
-  let curSha = sha;
-  if (!curSha) {
-    try {
-      const existing = await githubFetch(`/repos/${CONFIG_REPO}/contents/${CONFIG_PATH}`);
-      curSha = existing.sha;
-    } catch (e) {
-      if (e.statusCode !== 404) throw e;
-    }
-  }
-  // Strip heavy icon data so configs.json stays small and readable via the API
-  const clean = stripIcons(configs);
-  const content = Buffer.from(JSON.stringify({ configs: clean, deleted }, null, 2)).toString("base64");
-  const body = {
-    message: "console: update configs",
-    content,
-    ...(curSha ? { sha: curSha } : {})
-  };
-  await githubFetch(`/repos/${CONFIG_REPO}/contents/${CONFIG_PATH}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-}
 
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
   try {
     if (req.method === "GET") {
-      const { configs, deleted } = await loadConfigs();
-      sendJson(req, res, 200, { ok: true, configs, deleted });
+      const { db: data } = await db.loadDb();
+      // Map games + icons into the configs format for backward compatibility
+      const configs = data.games.map((g) => {
+        const icon = data.icons.find((i) => i.package_name === g.package_name);
+        return { ...g, icon_data_url: icon ? icon.icon_data_url : "" };
+      });
+      sendJson(req, res, 200, { ok: true, configs, deleted: [] });
       return;
     }
 
@@ -82,29 +29,46 @@ module.exports = async function handler(req, res) {
       const incoming = Array.isArray(body.configs)
         ? body.configs
         : (body.config ? [body.config] : []);
-      const deletedIncoming = Array.isArray(body.deleted) ? body.deleted : [];
-      const { configs, sha, deleted } = await loadConfigs();
-      const map = new Map(configs.map((c) => [c.id, c]));
+      const { db: data, sha } = await db.loadDb();
+
       for (const c of incoming) {
-        if (c && c.id) map.set(c.id, c);
+        if (c && c.id) {
+          // Update or add game entry
+          const idx = data.games.findIndex((g) => g.id === c.id);
+          const gameEntry = { ...c, updated_at: new Date().toISOString() };
+          if (idx >= 0) data.games[idx] = gameEntry;
+          else data.games.push(gameEntry);
+
+          // Also update icon if present
+          if (c.icon_data_url) {
+            const iconIdx = data.icons.findIndex((i) => i.package_name === c.package_name);
+            const iconEntry = {
+              package_name: c.package_name,
+              icon_data_url: c.icon_data_url,
+              updated_at: new Date().toISOString()
+            };
+            if (iconIdx >= 0) data.icons[iconIdx] = iconEntry;
+            else data.icons.push(iconEntry);
+          }
+        }
       }
-      // Honor deletions pushed from other devices
-      for (const delId of deletedIncoming) map.delete(delId);
-      const merged = [...map.values()];
-      const newDeleted = Array.from(new Set([...deleted, ...deletedIncoming]));
-      await saveConfigs(merged, sha, newDeleted);
-      sendJson(req, res, 200, { ok: true, configs: merged, deleted: newDeleted });
+
+      await db.saveDb(data, sha);
+      sendJson(req, res, 200, { ok: true, configs: data.games, deleted: data.builds || [] });
       return;
     }
 
     if (req.method === "DELETE") {
       const body = await readJson(req);
       const id = safeString(body.id);
-      const { configs, sha, deleted } = await loadConfigs();
-      const filtered = configs.filter((c) => c.id !== id);
-      const newDeleted = deleted.includes(id) ? deleted : [...deleted, id];
-      await saveConfigs(filtered, sha, newDeleted);
-      sendJson(req, res, 200, { ok: true, configs: filtered, deleted: newDeleted });
+      const { db: data, sha } = await db.loadDb();
+      const game = data.games.find((g) => g.id === id);
+      data.games = data.games.filter((g) => g.id !== id);
+      if (game && game.package_name) {
+        data.icons = data.icons.filter((i) => i.package_name !== game.package_name);
+      }
+      await db.saveDb(data, sha);
+      sendJson(req, res, 200, { ok: true, configs: data.games });
       return;
     }
 
