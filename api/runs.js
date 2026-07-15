@@ -2,14 +2,57 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
-  loadAllBuildInputs,
   loadHiddenBuilds,
-  loadRunMeta,
   readJson,
   requireOperator,
   safeString,
   sendJson
 } = require("./_shared");
+
+// Releases in ci-cd are tagged `android-<runNumber>-<runAttempt>` and their
+// title contains the version code (e.g. "APK com.x v12"). We use that to show
+// version info on build cards for ANY historical run (no stored metadata needed).
+let releasesCache = { ts: 0, map: null };
+const RELEASES_TTL = 5 * 60 * 1000;
+
+async function getReleasesVersionMap() {
+  const now = Date.now();
+  if (releasesCache.map && now - releasesCache.ts < RELEASES_TTL) {
+    return releasesCache.map;
+  }
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const map = {};
+  try {
+    const data = await githubFetch(`/repos/${ciRepository}/releases?per_page=100`);
+    const releases = Array.isArray(data) ? data : (data && data.items) || [];
+    for (const rel of releases) {
+      const m = (rel.name || "").match(/v(\d+)/);
+      if (m && rel.tag_name) {
+        map[rel.tag_name] = { code: m[1], name: rel.name };
+      }
+    }
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error("Failed to load releases for version map", err && err.message);
+  }
+  releasesCache = { ts: now, map };
+  return map;
+}
+
+function versionFromRelease(run, releasesMap) {
+  const tag = `android-${run.run_number}-${run.run_attempt}`;
+  const rel = releasesMap[tag];
+  if (!rel) return null;
+  const code = rel.code;
+  return { versionName: `1.0.${code}`, versionCode: code };
+}
+
+function attachVersion(run, version) {
+  if (!version) return run;
+  run.versionName = version.versionName;
+  run.versionCode = version.versionCode;
+  return run;
+}
 
 async function findByRequestId(requestId) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
@@ -38,26 +81,8 @@ async function findByRequestId(requestId) {
     htmlUrl: run.html_url,
     displayTitle: run.display_title || run.name
   };
-  const getMeta = await loadMergedRunMeta();
-  return attachBuildInputs(mapped, getMeta(run));
-}
-
-function attachBuildInputs(run, inputs) {
-  if (!run || !inputs) return run;
-  const ver = inputs.version_name || inputs.aab_version_name || "";
-  const code = inputs.version_code || inputs.aab_version_code || "";
-  if (ver) run.versionName = ver;
-  if (code) run.versionCode = code;
-  run.buildInputs = inputs;
-  return run;
-}
-
-async function loadMergedRunMeta() {
-  const [runMeta, buildInputs] = await Promise.all([loadRunMeta(), loadAllBuildInputs()]);
-  return (run) => {
-    const id = String(run.id);
-    return runMeta[id] || buildInputs[id] || null;
-  };
+  const releasesMap = await getReleasesVersionMap();
+  return attachVersion(mapped, versionFromRelease(mapped, releasesMap));
 }
 
 async function listRecentRuns() {
@@ -68,7 +93,7 @@ async function listRecentRuns() {
   );
 
   const hidden = await loadHiddenBuilds();
-  const getMeta = await loadMergedRunMeta();
+  const releasesMap = await getReleasesVersionMap();
 
   const filtered = (data.workflow_runs || [])
     .filter((run) => {
@@ -91,7 +116,7 @@ async function listRecentRuns() {
       htmlUrl: run.html_url,
       displayTitle: run.display_title || run.name
     };
-    return attachBuildInputs(mapped, getMeta(run));
+    return attachVersion(mapped, versionFromRelease(mapped, releasesMap));
   });
 }
 
