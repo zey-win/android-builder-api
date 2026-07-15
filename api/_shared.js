@@ -299,6 +299,25 @@ async function loadAllBuildInputs() {
   return {};
 }
 
+const RUN_META_REPO = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+const RUN_META_PATH = "builds/run-meta.json";
+
+async function loadRunMeta() {
+  try {
+    const data = await githubFetch(`/repos/${RUN_META_REPO}/contents/${RUN_META_PATH}`);
+    if (data && data.content) {
+      const parsed = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+      return parsed.runs && typeof parsed.runs === "object" ? parsed.runs : {};
+    }
+  } catch (err) {
+    if (err.statusCode !== 404) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load run meta", err.message);
+    }
+  }
+  return {};
+}
+
 async function saveBuildInputs(runId, inputs) {
   const rid = String(runId || "");
   if (!rid) return;
@@ -425,6 +444,7 @@ module.exports = {
   loadHiddenBuilds,
   addHiddenBuild,
   loadAllBuildInputs,
+  loadRunMeta,
   saveBuildInputs,
   sanitizeInputs
 };

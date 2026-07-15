@@ -4,6 +4,7 @@ const {
   handleOptions,
   loadAllBuildInputs,
   loadHiddenBuilds,
+  loadRunMeta,
   readJson,
   requireOperator,
   safeString,
@@ -37,8 +38,8 @@ async function findByRequestId(requestId) {
     htmlUrl: run.html_url,
     displayTitle: run.display_title || run.name
   };
-  const inputsMap = await loadAllBuildInputs();
-  return attachBuildInputs(mapped, inputsMap[String(run.id)]);
+  const getMeta = await loadMergedRunMeta();
+  return attachBuildInputs(mapped, getMeta(run));
 }
 
 function attachBuildInputs(run, inputs) {
@@ -51,6 +52,14 @@ function attachBuildInputs(run, inputs) {
   return run;
 }
 
+async function loadMergedRunMeta() {
+  const [runMeta, buildInputs] = await Promise.all([loadRunMeta(), loadAllBuildInputs()]);
+  return (run) => {
+    const id = String(run.id);
+    return runMeta[id] || buildInputs[id] || null;
+  };
+}
+
 async function listRecentRuns() {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
@@ -59,7 +68,7 @@ async function listRecentRuns() {
   );
 
   const hidden = await loadHiddenBuilds();
-  const inputsMap = await loadAllBuildInputs();
+  const getMeta = await loadMergedRunMeta();
 
   const filtered = (data.workflow_runs || [])
     .filter((run) => {
@@ -82,7 +91,7 @@ async function listRecentRuns() {
       htmlUrl: run.html_url,
       displayTitle: run.display_title || run.name
     };
-    return attachBuildInputs(mapped, inputsMap[String(run.id)]);
+    return attachBuildInputs(mapped, getMeta(run));
   });
 }
 
