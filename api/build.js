@@ -135,33 +135,52 @@ function encodeContentPath(path) {
 async function commitIconToCiCd({ requestId, buffer }) {
   const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciRef = process.env.CI_REF || "main";
-  const path = `builds/icons/builder-${requestId}.png`;
-  const encodedPath = encodeContentPath(path);
+  // `requestId` already starts with "builder-" (e.g. "builder-<hash>"),
+  // so the file must be builds/icons/<requestId>.png to match the site
+  // card fallback (builder.js builds builds/icons/builder-<hash>.png from
+  // the run title). Prepending another "builder-" previously produced a
+  // mismatched path and the card never found the icon.
+  const path = `builds/icons/${requestId}.png`;
+  const content = buffer.toString("base64");
 
-  let existingSha = null;
-  try {
-    const existing = await githubFetch(`/repos/${ciRepo}/contents/${encodedPath}?ref=${encodeURIComponent(ciRef)}`);
-    existingSha = existing.sha || null;
-  } catch (error) {
-    if (error.statusCode !== 404) {
-      throw error;
-    }
-  }
-
-  const body = {
-    message: `Android builder icon for ${requestId}`,
-    content: buffer.toString("base64"),
-    branch: ciRef
-  };
-
-  if (existingSha) {
-    body.sha = existingSha;
-  }
-
-  const result = await githubFetch(`/repos/${ciRepo}/contents/${encodedPath}`, {
-    method: "PUT",
+  // Use the Git Data API (blob -> tree -> commit -> ref) instead of the
+  // Contents API. The Contents API rejects files larger than 1 MB, but a
+  // launcher icon can be ~2.5 MB base64. The Data API handles blobs up
+  // to 100 MB.
+  const blob = await githubFetch(`/repos/${ciRepo}/git/blobs`, {
+    method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
+    body: JSON.stringify({ content, encoding: "base64" })
+  });
+
+  const ref = await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`);
+  const baseCommitSha = ref.object.sha;
+  const baseCommit = await githubFetch(`/repos/${ciRepo}/git/commits/${baseCommitSha}`);
+  const baseTreeSha = baseCommit.tree.sha;
+
+  const tree = await githubFetch(`/repos/${ciRepo}/git/trees`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      base_tree: baseTreeSha,
+      tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
+    })
+  });
+
+  const commit = await githubFetch(`/repos/${ciRepo}/git/commits`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      message: `Android builder icon for ${requestId}`,
+      tree: tree.sha,
+      parents: [baseCommitSha]
+    })
+  });
+
+  await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ sha: commit.sha })
   });
 
   return `https://raw.githubusercontent.com/${ciRepo}/${ciRef}/${path}`;
@@ -389,24 +408,26 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    // Pass icon: small icons inline as base64 (fast, no CDN delay); large icons
-    // are committed to ci-cd and passed by raw URL so they survive GitHub's
-    // ~50KB workflow_dispatch input limit.
+    // Commit the icon to ci-cd (builds/icons/builder-<id>.png) so the
+    // builder site card can render it (the card reads that path, since
+    // /api/runs does not return an inline iconUrl). commitIconToCiCd uses
+    // the Git Data API, which handles icons of any size, so we always
+    // commit. As a fallback we still inline the base64 when the commit
+    // fails and the icon is small enough for the workflow_dispatch input limit.
     let iconPngBase64 = "";
     let iconPngPath = "";
     const iconRaw = payload.icon_png_base64 || payload.iconDataUrl || "";
     if (iconRaw && !iconRaw.startsWith("http")) {
       const iconBuffer = normalizePng(iconRaw);
       if (iconBuffer) {
-        const encoded = iconBuffer.toString("base64");
-        if (encoded.length < ICON_INLINE_LIMIT) {
-          iconPngBase64 = encoded;
-        } else {
-          try {
-            iconPngPath = await commitIconToCiCd({ requestId, buffer: iconBuffer });
-          } catch (err) {
-            // eslint-disable-next-line no-console
-            console.error("Large icon commit failed:", err && err.message);
+        try {
+          iconPngPath = await commitIconToCiCd({ requestId, buffer: iconBuffer });
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("Icon commit failed:", err && err.message);
+          const encoded = iconBuffer.toString("base64");
+          if (encoded.length < ICON_INLINE_LIMIT) {
+            iconPngBase64 = encoded;
           }
         }
       }
