@@ -2,32 +2,15 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
-  readJson,
-  requireOperator,
+  loadAllBuildInputs,
   safeString,
   sendJson
 } = require("./_shared");
-
-const PNG_MAGIC = "89504e470d0a1a0a";
-
-function normalizePng(value) {
-  const raw = safeString(value);
-  if (!raw) return null;
-
-  const base64 = raw.includes(",") ? raw.split(",").pop() : raw;
-  const buffer = Buffer.from(base64, "base64");
-  if (buffer.length < 33 || buffer.subarray(0, 8).toString("hex") !== PNG_MAGIC) {
-    return null;
-  }
-  return buffer;
-}
 
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
   try {
-    requireOperator(req);
-
     const runId = safeString(req.query?.runId);
     if (!runId) {
       sendJson(req, res, 400, { ok: false, error: "runId is required" });
@@ -47,24 +30,18 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Parse displayTitle: "Android: Plinko / com.socialapps.plinko / apk_aab / 123456789"
+    // Parse displayTitle: "Android: AppName / package.name / format / runId"
     const raw = `${run.display_title || ""} ${run.name || ""}`;
-    const parts = raw.replace(/^Android:\s*/i, "").split(" / ").map(p => p.trim());
+    const parts = raw.replace(/^Android:\s*/i, "").split(" / ").map((p) => p.trim());
     const appName = parts[0] || "";
     const packageName = parts[1] || "";
     const buildFormat = parts[2] || "apk";
 
-    // The build config is stored in the workflow dispatch inputs
-    // We need to fetch the run's workflow dispatch event to get the original inputs
-    let inputs = {};
-    try {
-      const runDetail = await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}`);
-      if (runDetail.workflow_run?.workflow_inputs) {
-        inputs = runDetail.workflow_run.workflow_inputs;
-      }
-    } catch {}
+    // Load persisted build inputs (stored by api/build.js when the build was dispatched)
+    const allInputs = await loadAllBuildInputs();
+    const inputs = allInputs[runId] || {};
 
-    // Build config from workflow inputs (these are the original form values)
+    // Build config from persisted inputs, falling back to parsed run title
     const config = {
       game_repository: safeString(inputs.game_repository || "zey-win/plinko"),
       game_ref: safeString(inputs.game_ref || "main"),
@@ -79,7 +56,7 @@ module.exports = async function handler(req, res) {
       zeywin_api_key: safeString(inputs.zeywin_api_key || ""),
       zeywin_sdk_version: safeString(inputs.zeywin_sdk_version || "v3.9.37"),
       signing_profile: safeString(inputs.signing_profile || "slotspot"),
-      fast_build: safeString(inputs.fast_build || "true"),
+      fast_build: safeString(inputs.fast_build || "false"),
       admob_android_app_id: safeString(inputs.admob_android_app_id || ""),
       admob_android_banner_id: safeString(inputs.admob_android_banner_id || ""),
       admob_android_interstitial_id: safeString(inputs.admob_android_interstitial_id || ""),
@@ -93,7 +70,7 @@ module.exports = async function handler(req, res) {
       icon_foreground_base64: safeString(inputs.icon_foreground_base64 || ""),
     };
 
-    // Try to get icon URL
+    // Resolve icon URL from stored inputs
     let iconUrl = null;
     if (config.icon_png_path && config.icon_png_path.startsWith("http")) {
       iconUrl = config.icon_png_path;
@@ -103,7 +80,12 @@ module.exports = async function handler(req, res) {
       iconUrl = `data:image/png;base64,${config.icon_foreground_base64}`;
     }
 
-    sendJson(req, res, 200, { ok: true, config, icon_url: iconUrl, run: { id: run.id, displayTitle: run.display_title || run.name } });
+    sendJson(req, res, 200, {
+      ok: true,
+      config,
+      icon_url: iconUrl,
+      run: { id: run.id, displayTitle: run.display_title || run.name },
+    });
   } catch (error) {
     sendJson(req, res, error.statusCode || 500, errorPayload(error));
   }

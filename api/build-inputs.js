@@ -106,7 +106,7 @@ module.exports = async function handler(req, res) {
           aab_version_name: version?.versionName || "",
           aab_version_code: version?.versionCode || "",
           fast_build: "false",
-          signing_profile: "playmax",
+          signing_profile: "slotspot",
           zeywin_sdk_version: "v3.9.37",
           version_mode: "auto_next"
         };
