@@ -2,6 +2,7 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
+  loadAllBuildInputs,
   loadHiddenBuilds,
   readJson,
   requireOperator,
@@ -25,7 +26,7 @@ async function findByRequestId(requestId) {
     return null;
   }
 
-  return {
+  const mapped = {
     id: run.id,
     runNumber: run.run_number,
     runAttempt: run.run_attempt,
@@ -36,6 +37,18 @@ async function findByRequestId(requestId) {
     htmlUrl: run.html_url,
     displayTitle: run.display_title || run.name
   };
+  const inputsMap = await loadAllBuildInputs();
+  return attachBuildInputs(mapped, inputsMap[String(run.id)]);
+}
+
+function attachBuildInputs(run, inputs) {
+  if (!run || !inputs) return run;
+  const ver = inputs.version_name || inputs.aab_version_name || "";
+  const code = inputs.version_code || inputs.aab_version_code || "";
+  if (ver) run.versionName = ver;
+  if (code) run.versionCode = code;
+  run.buildInputs = inputs;
+  return run;
 }
 
 async function listRecentRuns() {
@@ -46,6 +59,7 @@ async function listRecentRuns() {
   );
 
   const hidden = await loadHiddenBuilds();
+  const inputsMap = await loadAllBuildInputs();
 
   const filtered = (data.workflow_runs || [])
     .filter((run) => {
@@ -56,17 +70,20 @@ async function listRecentRuns() {
     })
     .slice(0, 50);
 
-  return filtered.map((run) => ({
-    id: run.id,
-    runNumber: run.run_number,
-    runAttempt: run.run_attempt,
-    status: run.status,
-    conclusion: run.conclusion,
-    createdAt: run.created_at,
-    updatedAt: run.updated_at,
-    htmlUrl: run.html_url,
-    displayTitle: run.display_title || run.name
-  }));
+  return filtered.map((run) => {
+    const mapped = {
+      id: run.id,
+      runNumber: run.run_number,
+      runAttempt: run.run_attempt,
+      status: run.status,
+      conclusion: run.conclusion,
+      createdAt: run.created_at,
+      updatedAt: run.updated_at,
+      htmlUrl: run.html_url,
+      displayTitle: run.display_title || run.name
+    };
+    return attachBuildInputs(mapped, inputsMap[String(run.id)]);
+  });
 }
 
 module.exports = async function handler(req, res) {

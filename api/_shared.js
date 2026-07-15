@@ -252,6 +252,87 @@ function errorPayload(error) {
 const HIDDEN_FILE_REPO = "zey-win/android-builder-api";
 const HIDDEN_FILE_PATH = "data/hidden-builds.json";
 
+const BUILD_INPUTS_REPO = "zey-win/android-builder-api";
+const BUILD_INPUTS_PATH = "data/build-inputs.json";
+
+// Only non-secret, non-binary fields are persisted publicly (the repo is public).
+const SAFE_INPUT_KEYS = [
+  "builder_request_id",
+  "game_repository",
+  "game_ref",
+  "package_name",
+  "app_name",
+  "icon_png_path",
+  "zeywin_sdk_version",
+  "version_mode",
+  "version_name",
+  "version_code",
+  "aab_version_name",
+  "aab_version_code",
+  "build_format",
+  "fast_build",
+  "signing_profile"
+];
+
+function sanitizeInputs(inputs) {
+  const out = {};
+  if (!inputs || typeof inputs !== "object") return out;
+  for (const key of SAFE_INPUT_KEYS) {
+    if (inputs[key] != null) out[key] = inputs[key];
+  }
+  return out;
+}
+
+async function loadAllBuildInputs() {
+  try {
+    const data = await githubFetch(`/repos/${BUILD_INPUTS_REPO}/contents/${BUILD_INPUTS_PATH}`);
+    if (data && data.content) {
+      const parsed = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+      return parsed.inputs && typeof parsed.inputs === "object" ? parsed.inputs : {};
+    }
+  } catch (err) {
+    if (err.statusCode !== 404) {
+      // eslint-disable-next-line no-console
+      console.error("Failed to load build inputs", err.message);
+    }
+  }
+  return {};
+}
+
+async function saveBuildInputs(runId, inputs) {
+  const rid = String(runId || "");
+  if (!rid) return;
+  const all = await loadAllBuildInputs();
+  all[rid] = sanitizeInputs(inputs);
+
+  const repo = BUILD_INPUTS_REPO;
+  const path = BUILD_INPUTS_PATH;
+  let sha;
+  try {
+    const existing = await githubFetch(`/repos/${repo}/contents/${path}`);
+    sha = existing.sha;
+  } catch (e) {
+    if (e.statusCode !== 404) throw e;
+  }
+
+  const contentObj = {
+    updatedAt: new Date().toISOString(),
+    inputs: all
+  };
+  const content = Buffer.from(JSON.stringify(contentObj, null, 2)).toString("base64");
+  const body = {
+    message: `console: store build inputs for run ${rid}`,
+    content,
+    ...(sha ? { sha } : {})
+  };
+
+  await githubFetch(`/repos/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+}
+
 async function loadHiddenBuilds() {
   try {
     const data = await githubFetch(`/repos/${HIDDEN_FILE_REPO}/contents/${HIDDEN_FILE_PATH}`);
@@ -342,5 +423,8 @@ module.exports = {
   sendJson,
   setCors,
   loadHiddenBuilds,
-  addHiddenBuild
+  addHiddenBuild,
+  loadAllBuildInputs,
+  saveBuildInputs,
+  sanitizeInputs
 };

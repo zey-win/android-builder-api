@@ -9,7 +9,8 @@ const {
   readJson,
   requireOperator,
   safeString,
-  sendJson
+  sendJson,
+  saveBuildInputs
 } = require("./_shared");
 
 const PNG_MAGIC = "89504e470d0a1a0a";
@@ -459,6 +460,17 @@ module.exports = async function handler(req, res) {
       }
       await db.saveDb(data, sha);
     } catch (_e) { /* non-critical */ }
+
+    // Persist non-secret inputs so the builder site can show launch parameters
+    // for any run (not just those submitted from the same browser).
+    if (run && run.id) {
+      try {
+        await saveBuildInputs(run.id, inputs);
+      } catch (err) {
+        // eslint-disable-next-line no-console
+        console.error("Failed to persist build inputs:", err && err.message);
+      }
+    }
 
     sendJson(req, res, 200, {
       ok: true,

@@ -36,6 +36,10 @@
       "destination": "/api/game.js"
     },
     {
+      "source": "/api/build-inputs",
+      "destination": "/api/build-inputs.js"
+    },
+    {
       "source": "/api/generate-icon",
       "destination": "/api/generate-icon.js"
     },
