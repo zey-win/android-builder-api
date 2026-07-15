@@ -7,7 +7,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 // Releases in ci-cd are tagged `android-<runNumber>-<runAttempt>` and their
 // title contains the version code (e.g. "APK com.x v12"). We use that to show
@@ -40,7 +40,7 @@ async function getReleasesVersionMap() {
 }
 
 function versionFromRelease(run, releasesMap) {
-  const tag = `android-${run.run_number}-${run.run_attempt}`;
+  const tag = `android-${run.runNumber}-${run.runAttempt}`;
   const rel = releasesMap[tag];
   if (!rel) return null;
   const code = rel.code;
