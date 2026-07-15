@@ -14,7 +14,8 @@ module.exports = async function handler(req, res) {
 
   try {
     if (req.method === "GET") {
-      const packageName = safeString(req.query && req.query.package_name);
+      const url = new URL(req.url, "http://localhost");
+      const packageName = safeString(url.searchParams.get("package_name"));
       const { db } = await configs.loadDb();
       if (packageName) {
         const found = db.icons.find((i) => i.package_name === packageName) || null;

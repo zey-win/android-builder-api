@@ -73,8 +73,9 @@ module.exports = async function handler(req, res) {
   try {
     if (req.method === "GET") {
       const { db } = await loadDb();
-      const section = safeString(req.query && req.query.section);
-      const packageName = safeString(req.query && req.query.package_name);
+      const url = new URL(req.url, "http://localhost");
+      const section = safeString(url.searchParams.get("section"));
+      const packageName = safeString(url.searchParams.get("package_name"));
       if (section === "games") {
         sendJson(req, res, 200, { ok: true, games: db.games });
         return;
