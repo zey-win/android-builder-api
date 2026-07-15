@@ -62,6 +62,10 @@
     {
       "source": "/api/runs",
       "destination": "/api/runs.js"
+    },
+    {
+      "source": "/api/builds/:runId",
+      "destination": "/api/builds.js"
     }
   ],
   "functions": {
