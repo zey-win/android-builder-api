@@ -19,6 +19,32 @@ function parseDisplayTitle(title) {
   };
 }
 
+let releasesCache = { ts: 0, map: null };
+const RELEASES_TTL = 5 * 60 * 1000;
+
+async function getReleasesVersionMap() {
+  const now = Date.now();
+  if (releasesCache.map && now - releasesCache.ts < RELEASES_TTL) {
+    return releasesCache.map;
+  }
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+  const map = {};
+  try {
+    const data = await githubFetch(`/repos/${ciRepository}/releases?per_page=100`);
+    const releases = Array.isArray(data) ? data : (data && data.items) || [];
+    for (const rel of releases) {
+      const m = (rel.name || "").match(/v(\d+)/);
+      if (m && rel.tag_name) {
+        map[rel.tag_name] = { code: m[1], name: rel.name };
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load releases for version map", err && err.message);
+  }
+  releasesCache = { ts: now, map };
+  return map;
+}
+
 async function fetchRunFromGitHub(runId) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
@@ -40,6 +66,14 @@ async function fetchRunFromGitHub(runId) {
   };
 }
 
+function versionFromRelease(run, releasesMap) {
+  const tag = `android-${run.runNumber}-${run.runAttempt}`;
+  const rel = releasesMap[tag];
+  if (!rel) return null;
+  const code = rel.code;
+  return { versionName: `1.0.${code}`, versionCode: code };
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -59,16 +93,18 @@ module.exports = async function handler(req, res) {
       const run = await fetchRunFromGitHub(runId);
       if (run) {
         const { app, pkg, fmt } = parseDisplayTitle(run.displayTitle);
+        const releasesMap = await getReleasesVersionMap();
+        const version = versionFromRelease(run, releasesMap);
         inputs = {
           game_repository: "zey-win/plinko",
           game_ref: "main",
           package_name: pkg,
           app_name: app,
           build_format: fmt || "apk_aab",
-          version_name: run.versionName || "",
-          version_code: run.versionCode || "",
-          aab_version_name: run.versionName || "",
-          aab_version_code: run.versionCode || "",
+          version_name: version?.versionName || "",
+          version_code: version?.versionCode || "",
+          aab_version_name: version?.versionName || "",
+          aab_version_code: version?.versionCode || "",
           fast_build: "false",
           signing_profile: "playmax",
           zeywin_sdk_version: "v3.9.37",
