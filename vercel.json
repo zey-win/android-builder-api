@@ -44,6 +44,10 @@
       "destination": "/api/icon.js"
     },
     {
+      "source": "/api/icons",
+      "destination": "/api/icons.js"
+    },
+    {
       "source": "/api/logs",
       "destination": "/api/logs.js"
     },
