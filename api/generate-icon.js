@@ -5,7 +5,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 const PROMPTS = {
   "zey-win/plinko": "Plinko game app icon, falling balls bouncing through pegs, bright neon style, gold coins, casino theme, vibrant colors, 3D render style, 1024x1024",

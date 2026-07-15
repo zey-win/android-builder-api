@@ -7,7 +7,7 @@ const {
   safeString,
   sendJson,
   addHiddenBuild
-} = require("./_shared");
+} = require("../lib/shared");
 
 async function handleCancel(req, res) {
   const body = await readJson(req, 32_000);

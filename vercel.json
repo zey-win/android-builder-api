@@ -29,7 +29,7 @@
     },
     {
       "source": "/api/health",
-      "destination": "/api/health.js"
+      "destination": "/api/runs.js"
     },
     {
       "source": "/api/branches",

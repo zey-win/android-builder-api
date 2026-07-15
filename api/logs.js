@@ -5,7 +5,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 function tailLines(text, count = 180) {
   return String(text || "")

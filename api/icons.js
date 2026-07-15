@@ -6,7 +6,7 @@ const {
   readJson,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 const configs = require("./configs");
 
 module.exports = async function handler(req, res) {

@@ -7,7 +7,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 const PNG_MAGIC = "89504e470d0a1a0a";
 const MAX_PREVIEW_BYTES = 2_500_000;

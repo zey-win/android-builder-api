@@ -5,7 +5,7 @@ const {
   readJson,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 const DB_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
 const DB_PATH = "db.json";

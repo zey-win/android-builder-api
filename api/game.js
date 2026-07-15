@@ -8,7 +8,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 async function hasUnityProject(repoFullName, defaultBranch) {
   try {

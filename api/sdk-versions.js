@@ -5,7 +5,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 function normalizeTag(tag) {
   const raw = safeString(tag);

@@ -7,7 +7,7 @@ const {
   requireOperator,
   safeString,
   sendJson
-} = require("./_shared");
+} = require("../lib/shared");
 
 function encodeContentPath(path) {
   return encodeURIComponent(path).replaceAll("%2F", "/");
