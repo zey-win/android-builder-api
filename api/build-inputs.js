@@ -113,6 +113,12 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    // Map icon_png_path to iconDataUrl for frontend compatibility
+    const iconPath = inputs.icon_png_path;
+    if (iconPath && iconPath.startsWith("http") && !inputs.iconDataUrl) {
+      inputs.iconDataUrl = iconPath;
+    }
+
     sendJson(req, res, 200, { ok: true, runId, inputs });
   } catch (error) {
     sendJson(req, res, error.statusCode || 500, errorPayload(error));
