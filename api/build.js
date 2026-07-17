@@ -231,7 +231,7 @@ function buildWorkflowInputs(payload, iconPath) {
     game_ref: safeString(payload.game_ref, "main"),
     package_name: safeString(payload.package_name),
     app_name: safeString(payload.app_name),
-    icon_png_path: iconPath || safeString(payload.icon_png_path),
+    icon_png_path: iconPath || safeString(payload.icon_png_path) || safeString(payload.icon_url),
     icon_png_base64: safeString(payload.icon_png_base64),
     zeywin_api_key: safeString(payload.zeywin_api_key),
     zeywin_sdk_version: safeString(payload.zeywin_sdk_version),
