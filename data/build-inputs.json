@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T15:23:40.868Z",
+  "updatedAt": "2026-07-18T15:23:48.694Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1051,6 +1051,23 @@
       "version_code": "1",
       "aab_version_name": "14.0",
       "aab_version_code": "26",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29649897387": {
+      "builder_request_id": "builder-mrqioddm",
+      "game_repository": "zey-win/Unstopable",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.chicken.road",
+      "app_name": "Unstopable: Real Money",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__Unstopable.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "20.0",
+      "aab_version_code": "20",
       "build_format": "apk_aab",
       "fast_build": "true",
       "signing_profile": "playmax"
