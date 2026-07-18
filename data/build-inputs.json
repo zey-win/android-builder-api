@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T06:17:44.359Z",
+  "updatedAt": "2026-07-18T06:24:05.654Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -439,6 +439,23 @@
       "version_code": "1",
       "aab_version_name": "21.0",
       "aab_version_code": "21",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29633925515": {
+      "builder_request_id": "builder-mrpze91v",
+      "game_repository": "zey-win/wheel-of-fortune",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.luckywheel",
+      "app_name": "Lucky Wheel",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/icons/builder-mrpze91v.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "12.0",
+      "aab_version_code": "12",
       "build_format": "apk_aab",
       "fast_build": "true",
       "signing_profile": "playmax"
