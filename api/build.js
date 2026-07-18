@@ -147,43 +147,64 @@ async function commitIconToCiCd({ requestId, buffer }) {
   // Contents API. The Contents API rejects files larger than 1 MB, but a
   // launcher icon can be ~2.5 MB base64. The Data API handles blobs up
   // to 100 MB.
-  const blob = await githubFetch(`/repos/${ciRepo}/git/blobs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ content, encoding: "base64" })
-  });
+  //
+  // Builds are dispatched concurrently, so several icon commits race on the
+  // same ci-cd branch and the final PATCH ref frequently fails with HTTP 409
+  // ("ref moved"). Without a retry the commit is dropped and — because large
+  // icons cannot be inlined into the workflow_dispatch input — the user icon
+  // silently never reaches the build. Retry the whole sequence (re-reading
+  // the current ref each time) so the icon reliably lands.
+  const maxAttempts = 8;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const blob = await githubFetch(`/repos/${ciRepo}/git/blobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, encoding: "base64" })
+      });
 
-  const ref = await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`);
-  const baseCommitSha = ref.object.sha;
-  const baseCommit = await githubFetch(`/repos/${ciRepo}/git/commits/${baseCommitSha}`);
-  const baseTreeSha = baseCommit.tree.sha;
+      const ref = await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`);
+      const baseCommitSha = ref.object.sha;
+      const baseCommit = await githubFetch(`/repos/${ciRepo}/git/commits/${baseCommitSha}`);
+      const baseTreeSha = baseCommit.tree.sha;
 
-  const tree = await githubFetch(`/repos/${ciRepo}/git/trees`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      base_tree: baseTreeSha,
-      tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
-    })
-  });
+      const tree = await githubFetch(`/repos/${ciRepo}/git/trees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
+        })
+      });
 
-  const commit = await githubFetch(`/repos/${ciRepo}/git/commits`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      message: `Android builder icon for ${requestId}`,
-      tree: tree.sha,
-      parents: [baseCommitSha]
-    })
-  });
+      const commit = await githubFetch(`/repos/${ciRepo}/git/commits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Android builder icon for ${requestId}`,
+          tree: tree.sha,
+          parents: [baseCommitSha]
+        })
+      });
 
-  await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ sha: commit.sha })
-  });
+      await githubFetch(`/repos/${ciRepo}/git/refs/heads/${encodeURIComponent(ciRef)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sha: commit.sha })
+      });
 
-  return `https://raw.githubusercontent.com/${ciRepo}/${ciRef}/${path}`;
+      return `https://raw.githubusercontent.com/${ciRepo}/${ciRef}/${path}`;
+    } catch (err) {
+      lastErr = err;
+      const code = err.statusCode;
+      const retryable = !code || code === 409 || code === 429 || code === 502 || code === 503;
+      if (!retryable || attempt === maxAttempts) break;
+      const backoff = Math.min(2000, 250 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 250);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+  throw lastErr || new Error("commitIconToCiCd failed");
 }
 
 async function commitFile({ repo, branch, filePath, buffer, message }) {
