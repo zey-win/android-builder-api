@@ -76,8 +76,8 @@ function requireToken() {
 
 function isAllowedRepo(repo) {
   const allowed = getAllowedRepos();
-  if (allowed.length > 0) {
-    return allowed.includes(repo);
+  if (allowed.length > 0 && allowed.includes(repo)) {
+    return true;
   }
 
   const org = getGithubOrg();
