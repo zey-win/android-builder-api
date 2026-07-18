@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T06:14:14.893Z",
+  "updatedAt": "2026-07-18T06:15:08.340Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -388,6 +388,23 @@
       "version_code": "1",
       "aab_version_name": "44.0",
       "aab_version_code": "44",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29633663318": {
+      "builder_request_id": "builder-mrpz2p6t",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.falling.plinko",
+      "app_name": "Plinko Falling Balls",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/icons/builder-mrpz2p6t.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "33.0",
+      "aab_version_code": "33",
       "build_format": "apk_aab",
       "fast_build": "true",
       "signing_profile": "playmax"
