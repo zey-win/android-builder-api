@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T14:03:06.054Z",
+  "updatedAt": "2026-07-18T14:03:13.310Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -875,6 +875,23 @@
       "package_name": "com.playsocialgames.luckywheel",
       "app_name": "Lucky Wheel",
       "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__wheel-of-fortune.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "11.0",
+      "aab_version_code": "11",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29647296069": {
+      "builder_request_id": "builder-mrqfsqp1",
+      "game_repository": "zey-win/roulette",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.roulette",
+      "app_name": "Roulette",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__roulette.png",
       "zeywin_sdk_version": "v3.9.37",
       "version_mode": "manual",
       "version_name": "1",
