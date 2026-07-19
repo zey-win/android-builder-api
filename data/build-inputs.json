@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T22:43:24.421Z",
+  "updatedAt": "2026-07-19T22:43:32.972Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1882,6 +1882,23 @@
       "version_mode": "auto_next",
       "version_name": "28.0",
       "version_code": "50",
+      "aab_version_name": "",
+      "aab_version_code": "",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29706660459": {
+      "builder_request_id": "builder-mrsdto6m",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.plinkofun",
+      "app_name": "Plinko: Real Money",
+      "icon_png_path": "https://zey-win.github.io/icons/com.playsocialgames.plinkofun.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "auto_next",
+      "version_name": "42.0",
+      "version_code": "42",
       "aab_version_name": "",
       "aab_version_code": "",
       "build_format": "apk_aab",
