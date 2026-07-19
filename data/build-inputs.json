@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T14:49:39.165Z",
+  "updatedAt": "2026-07-19T14:55:48.935Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1555,6 +1555,23 @@
       "package_name": "com.playsocialgames.blackjakck",
       "app_name": "BlackJack",
       "icon_png_path": "",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "11.0",
+      "aab_version_code": "11",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29691799650": {
+      "builder_request_id": "builder-mrrx45i2",
+      "game_repository": "zey-win/baccarat-tiger",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.bacarrattiger",
+      "app_name": "Baccarat",
+      "icon_png_path": "builds/icons/builder-mrrx45i2.png",
       "zeywin_sdk_version": "v3.9.37",
       "version_mode": "manual",
       "version_name": "1",
