@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T13:44:43.772Z",
+  "updatedAt": "2026-07-19T14:49:39.165Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1544,6 +1544,23 @@
       "version_code": "17",
       "aab_version_name": "",
       "aab_version_code": "",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29691597134": {
+      "builder_request_id": "builder-mrrww8ho",
+      "game_repository": "zey-win/blackjack",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.blackjakck",
+      "app_name": "BlackJack",
+      "icon_png_path": "",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "11.0",
+      "aab_version_code": "11",
       "build_format": "apk",
       "fast_build": "true",
       "signing_profile": "playmax"
