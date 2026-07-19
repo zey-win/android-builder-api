@@ -133,6 +133,8 @@ function encodeContentPath(path) {
 }
 
 async function commitIconToCiCd({ requestId, buffer }) {
+  // eslint-disable-next-line no-console
+  console.log(`commitIconToCiCd: writing builds/icons/${requestId}.png (${buffer.length} bytes)`);
   const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciRef = process.env.CI_REF || "main";
   // `requestId` already starts with "builder-" (e.g. "builder-<hash>"),
@@ -194,6 +196,8 @@ async function commitIconToCiCd({ requestId, buffer }) {
         body: JSON.stringify({ sha: commit.sha })
       });
 
+      // eslint-disable-next-line no-console
+      console.log(`commitIconToCiCd: OK -> builds/icons/${requestId}.png`);
       // Return the repo-relative path (e.g. "builds/icons/builder-<id>.png").
       // The build workflow checks out ci-cd at the workspace root, so it reads
       // the icon straight from its own checkout — no CDN round-trip and, most
@@ -214,6 +218,8 @@ async function commitIconToCiCd({ requestId, buffer }) {
 }
 
 async function commitIconToSite({ packageName, buffer }) {
+  // eslint-disable-next-line no-console
+  console.log(`commitIconToSite: writing icons/${packageName}.png (${buffer.length} bytes)`);
   const siteRepo = process.env.SITE_REPOSITORY || "zey-win/zey-win.github.io";
   const siteRef = process.env.SITE_REF || "main";
   const path = `icons/${packageName}.png`;
@@ -259,6 +265,8 @@ async function commitIconToSite({ packageName, buffer }) {
         body: JSON.stringify({ sha: commit.sha })
       });
 
+      // eslint-disable-next-line no-console
+      console.log(`commitIconToSite: OK -> https://zey-win.github.io/icons/${packageName}.png`);
       return { path, url: `https://zey-win.github.io/icons/${packageName}.png` };
     } catch (err) {
       lastErr = err;
@@ -546,6 +554,8 @@ module.exports = async function handler(req, res) {
     }
 
     const dispatchStartedAt = new Date();
+    // eslint-disable-next-line no-console
+    console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
     const dispatch = await dispatchWorkflow(inputs);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt });
 
