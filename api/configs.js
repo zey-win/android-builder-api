@@ -43,7 +43,7 @@ async function loadDb() {
   return { db: { ...DEFAULT_DB }, sha: null };
 }
 
-async function saveDb(db, sha) {
+async function saveDb(db, sha, attempt = 0) {
   let curSha = sha;
   if (!curSha) {
     try {
@@ -60,11 +60,19 @@ async function saveDb(db, sha) {
     content,
     ...(curSha ? { sha: curSha } : {})
   };
-  await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
+  try {
+    await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body)
+    });
+  } catch (err) {
+    // Another writer (e.g. a concurrent build) changed db.json; reload sha and retry.
+    if ((err.statusCode === 409 || err.statusCode === 422) && attempt < 5) {
+      return saveDb(db, null, attempt + 1);
+    }
+    throw err;
+  }
 }
 
 module.exports = async function handler(req, res) {
@@ -149,6 +157,25 @@ module.exports = async function handler(req, res) {
         const idx = db.games.findIndex((g) => g.package_name === body.game.package_name);
         if (idx >= 0) db.games[idx] = { ...db.games[idx], ...body.game, updated_at: new Date().toISOString() };
         else db.games.push({ ...body.game, updated_at: new Date().toISOString() });
+      }
+
+      // Update single config (frontend sends { config: cfg })
+      if (body.config && typeof body.config === "object") {
+        const c = body.config;
+        const cfgId = c.id || c.package_name;
+        if (cfgId) {
+          const idx = db.games.findIndex((g) => (c.id && g.id === c.id) || (c.package_name && g.package_name === c.package_name));
+          const gameEntry = { ...(idx >= 0 ? db.games[idx] : {}), ...c, updated_at: new Date().toISOString() };
+          if (idx >= 0) db.games[idx] = gameEntry;
+          else db.games.push(gameEntry);
+        }
+        const iconData = c.icon_data_url || c.icon_url || "";
+        if (c.package_name && iconData) {
+          const iconIdx = db.icons.findIndex((i) => i.package_name === c.package_name);
+          const iconEntry = { package_name: c.package_name, icon_data_url: iconData, updated_at: new Date().toISOString() };
+          if (iconIdx >= 0) db.icons[iconIdx] = iconEntry;
+          else db.icons.push(iconEntry);
+        }
       }
 
       // Update build (single build record)
