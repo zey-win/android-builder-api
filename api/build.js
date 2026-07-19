@@ -213,6 +213,65 @@ async function commitIconToCiCd({ requestId, buffer }) {
   throw lastErr || new Error("commitIconToCiCd failed");
 }
 
+async function commitIconToSite({ packageName, buffer }) {
+  const siteRepo = process.env.SITE_REPOSITORY || "zey-win/zey-win.github.io";
+  const siteRef = process.env.SITE_REF || "main";
+  const path = `icons/${packageName}.png`;
+  const content = buffer.toString("base64");
+
+  const maxAttempts = 5;
+  let lastErr;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const blob = await githubFetch(`/repos/${siteRepo}/git/blobs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ content, encoding: "base64" })
+      });
+
+      const ref = await githubFetch(`/repos/${siteRepo}/git/refs/heads/${encodeURIComponent(siteRef)}`);
+      const baseCommitSha = ref.object.sha;
+      const baseCommit = await githubFetch(`/repos/${siteRepo}/git/commits/${baseCommitSha}`);
+      const baseTreeSha = baseCommit.tree.sha;
+
+      const tree = await githubFetch(`/repos/${siteRepo}/git/trees`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          base_tree: baseTreeSha,
+          tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
+        })
+      });
+
+      const commit = await githubFetch(`/repos/${siteRepo}/git/commits`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: `Update icon for ${packageName}`,
+          tree: tree.sha,
+          parents: [baseCommitSha]
+        })
+      });
+
+      await githubFetch(`/repos/${siteRepo}/git/refs/heads/${encodeURIComponent(siteRef)}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sha: commit.sha })
+      });
+
+      return { path, url: `https://zey-win.github.io/icons/${packageName}.png` };
+    } catch (err) {
+      lastErr = err;
+      const code = err.statusCode;
+      const retryable = !code || code === 409 || code === 429 || code === 502 || code === 503;
+      if (!retryable || attempt === maxAttempts) break;
+      const backoff = Math.min(2000, 250 * 2 ** (attempt - 1)) + Math.floor(Math.random() * 250);
+      await new Promise((r) => setTimeout(r, backoff));
+    }
+  }
+  throw lastErr || new Error("commitIconToSite failed");
+}
+
 async function commitFile({ repo, branch, filePath, buffer, message }) {
   const encodedPath = encodeContentPath(filePath);
   let existingSha = null;
@@ -456,6 +515,15 @@ module.exports = async function handler(req, res) {
           if (encoded.length < ICON_INLINE_LIMIT) {
             iconPngBase64 = encoded;
           }
+        }
+        // Commit base64 JSON to site repo for step 45 to fetch
+        try {
+          await commitIconToSite({ packageName, buffer: iconBuffer });
+          // eslint-disable-next-line no-console
+          console.log(`Icon committed to site: icons/${packageName}.png`);
+        } catch (err) {
+          // eslint-disable-next-line no-console
+          console.error("Icon site commit failed:", err && err.message);
         }
       }
     }
