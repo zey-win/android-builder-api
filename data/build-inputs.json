@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T11:51:35.792Z",
+  "updatedAt": "2026-07-19T12:43:07.146Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1459,6 +1459,23 @@
       "version_code": "1",
       "aab_version_name": "13.0",
       "aab_version_code": "13",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29687507101": {
+      "builder_request_id": "builder-mrrsdjcz",
+      "game_repository": "zey-win/New-Slots",
+      "game_ref": "main",
+      "package_name": "com.casino.game.socialfun",
+      "app_name": "888 Casino",
+      "icon_png_path": "builds/icons/builder-mrrsdjcz.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "auto_next",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "",
+      "aab_version_code": "",
       "build_format": "apk",
       "fast_build": "true",
       "signing_profile": "playmax"
