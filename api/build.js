@@ -194,7 +194,13 @@ async function commitIconToCiCd({ requestId, buffer }) {
         body: JSON.stringify({ sha: commit.sha })
       });
 
-      return `https://raw.githubusercontent.com/${ciRepo}/${ciRef}/${path}`;
+      // Return the repo-relative path (e.g. "builds/icons/builder-<id>.png").
+      // The build workflow checks out ci-cd at the workspace root, so it reads
+      // the icon straight from its own checkout — no CDN round-trip and, most
+      // importantly, NO base64 inlining. GitHub truncates large workflow_dispatch
+      // string inputs, so inlining the icon as base64 produced a half-written
+      // (corrupt / radial-gradient) PNG. Copying the committed file is exact.
+      return path;
     } catch (err) {
       lastErr = err;
       const code = err.statusCode;
