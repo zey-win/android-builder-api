@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-18T20:12:02.922Z",
+  "updatedAt": "2026-07-19T11:41:35.202Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -1409,6 +1409,23 @@
       "aab_version_name": "",
       "aab_version_code": "",
       "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29685593316": {
+      "builder_request_id": "builder-mrrq6drm",
+      "game_repository": "zey-win/roulette",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.roulette",
+      "app_name": "Roulette",
+      "icon_png_path": "builds/icons/builder-mrrq6drm.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "11.0",
+      "aab_version_code": "11",
+      "build_format": "apk",
       "fast_build": "true",
       "signing_profile": "playmax"
     }
