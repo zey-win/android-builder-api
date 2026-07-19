@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-19T23:10:26.237Z",
+  "updatedAt": "2026-07-19T23:51:53.171Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2043,6 +2043,23 @@
     },
     "29707474865": {
       "builder_request_id": "builder-mrses9dm",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.socialapps.plinko",
+      "app_name": "Plinko",
+      "icon_png_path": "https://zey-win.github.io/icons/com.socialapps.plinko.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "version_mode": "auto_next",
+      "version_name": "",
+      "version_code": "",
+      "aab_version_name": "",
+      "aab_version_code": "",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax"
+    },
+    "29708604303": {
+      "builder_request_id": "builder-mrsg9gd9",
       "game_repository": "zey-win/plinko",
       "game_ref": "main",
       "package_name": "com.socialapps.plinko",
