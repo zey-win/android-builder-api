@@ -132,9 +132,9 @@ function encodeContentPath(path) {
   return path.split("/").map(encodeURIComponent).join("/");
 }
 
-async function commitIconToCiCd({ requestId, buffer }) {
+async function commitIconToCiCd({ requestId, packageName, buffer }) {
   // eslint-disable-next-line no-console
-  console.log(`commitIconToCiCd: writing builds/icons/${requestId}.png (${buffer.length} bytes)`);
+  console.log(`commitIconToCiCd: writing builds/icons/${requestId}.png + builds/icons/${packageName}.png (${buffer.length} bytes)`);
   const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const ciRef = process.env.CI_REF || "main";
   // `requestId` already starts with "builder-" (e.g. "builder-<hash>"),
@@ -142,7 +142,10 @@ async function commitIconToCiCd({ requestId, buffer }) {
   // card fallback (builder.js builds builds/icons/builder-<hash>.png from
   // the run title). Prepending another "builder-" previously produced a
   // mismatched path and the card never found the icon.
-  const path = `builds/icons/${requestId}.png`;
+  // We ALSO write builds/icons/<packageName>.png so the ci-cd icon
+  // catalog is complete and keyed by package (one source of truth per game).
+  const paths = [`builds/icons/${requestId}.png`];
+  if (packageName) paths.push(`builds/icons/${packageName}.png`);
   const content = buffer.toString("base64");
 
   // Use the Git Data API (blob -> tree -> commit -> ref) instead of the
@@ -176,7 +179,7 @@ async function commitIconToCiCd({ requestId, buffer }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           base_tree: baseTreeSha,
-          tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
+          tree: paths.map((p) => ({ path: p, mode: "100644", type: "blob", sha: blob.sha }))
         })
       });
 
@@ -197,14 +200,15 @@ async function commitIconToCiCd({ requestId, buffer }) {
       });
 
       // eslint-disable-next-line no-console
-      console.log(`commitIconToCiCd: OK -> builds/icons/${requestId}.png`);
-      // Return the repo-relative path (e.g. "builds/icons/builder-<id>.png").
-      // The build workflow checks out ci-cd at the workspace root, so it reads
-      // the icon straight from its own checkout — no CDN round-trip and, most
-      // importantly, NO base64 inlining. GitHub truncates large workflow_dispatch
-      // string inputs, so inlining the icon as base64 produced a half-written
-      // (corrupt / radial-gradient) PNG. Copying the committed file is exact.
-      return path;
+      console.log(`commitIconToCiCd: OK -> ${paths.join(", ")}`);
+      // Return the canonical repo-relative path (by package when available,
+      // else by requestId). The build workflow checks out ci-cd at the
+      // workspace root, so it reads the icon straight from its own checkout —
+      // no CDN round-trip and, most importantly, NO base64 inlining. GitHub
+      // truncates large workflow_dispatch string inputs, so inlining the icon
+      // as base64 produced a half-written (corrupt / radial-gradient) PNG.
+      // Copying the committed file is exact.
+      return packageName ? `builds/icons/${packageName}.png` : `builds/icons/${requestId}.png`;
     } catch (err) {
       lastErr = err;
       const code = err.statusCode;
@@ -520,7 +524,7 @@ module.exports = async function handler(req, res) {
       const iconBuffer = normalizePng(iconRaw);
       if (iconBuffer) {
         try {
-          iconPngPath = await commitIconToCiCd({ requestId, buffer: iconBuffer });
+          iconPngPath = await commitIconToCiCd({ requestId, packageName, buffer: iconBuffer });
         } catch (err) {
           // eslint-disable-next-line no-console
           console.error("Icon commit failed:", err && err.message);
