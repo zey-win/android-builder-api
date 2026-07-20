@@ -219,10 +219,9 @@ async function commitIconToCiCd({ requestId, buffer }) {
 
 async function commitIconToSite({ packageName, buffer }) {
   // eslint-disable-next-line no-console
-  console.log(`commitIconToSite: writing icons/${packageName}.png (${buffer.length} bytes)`);
+  console.log(`commitIconToSite: writing icons/${packageName}.png + repo-icons/${packageName}.png (${buffer.length} bytes)`);
   const siteRepo = process.env.SITE_REPOSITORY || "zey-win/zey-win.github.io";
   const siteRef = process.env.SITE_REF || "main";
-  const path = `icons/${packageName}.png`;
   const content = buffer.toString("base64");
 
   const maxAttempts = 5;
@@ -240,12 +239,18 @@ async function commitIconToSite({ packageName, buffer }) {
       const baseCommit = await githubFetch(`/repos/${siteRepo}/git/commits/${baseCommitSha}`);
       const baseTreeSha = baseCommit.tree.sha;
 
+      // Write the icon to BOTH locations: icons/ (used by the build workflow)
+      // and repo-icons/ (used by the public site cards). The uploaded icon from
+      // the builder popup lands in the site repo automatically.
       const tree = await githubFetch(`/repos/${siteRepo}/git/trees`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           base_tree: baseTreeSha,
-          tree: [{ path, mode: "100644", type: "blob", sha: blob.sha }]
+          tree: [
+            { path: `icons/${packageName}.png`, mode: "100644", type: "blob", sha: blob.sha },
+            { path: `repo-icons/${packageName}.png`, mode: "100644", type: "blob", sha: blob.sha }
+          ]
         })
       });
 
@@ -266,8 +271,8 @@ async function commitIconToSite({ packageName, buffer }) {
       });
 
       // eslint-disable-next-line no-console
-      console.log(`commitIconToSite: OK -> https://zey-win.github.io/icons/${packageName}.png`);
-      return { path, url: `https://zey-win.github.io/icons/${packageName}.png` };
+      console.log(`commitIconToSite: OK -> https://zey-win.github.io/icons/${packageName}.png + repo-icons/${packageName}.png`);
+      return { path: `icons/${packageName}.png`, url: `https://zey-win.github.io/icons/${packageName}.png` };
     } catch (err) {
       lastErr = err;
       const code = err.statusCode;
