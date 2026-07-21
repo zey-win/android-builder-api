@@ -44,7 +44,7 @@ async function getReleasesVersionMap() {
 }
 
 function versionFromRelease(run, releasesMap) {
-  const tag = `android-${run.runNumber}-${runAttempt}`;
+  const tag = `android-${run.runNumber}-${run.runAttempt}`;
   const rel = releasesMap[tag];
   if (!rel) return null;
   const code = rel.code;
