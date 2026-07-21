@@ -13,8 +13,15 @@ const DB_PATH = "db.json";
 async function loadDb() {
   try {
     const data = await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`);
+    let text = null;
     if (data && data.content) {
-      return JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+      text = Buffer.from(data.content, "base64").toString("utf8");
+    } else if (data && data.download_url) {
+      const raw = await fetch(data.download_url);
+      if (raw.ok) text = await raw.text();
+    }
+    if (text) {
+      return JSON.parse(text);
     }
   } catch (err) {
     if (err.statusCode !== 404) {
