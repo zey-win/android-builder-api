@@ -264,6 +264,7 @@ const SAFE_INPUT_KEYS = [
   "app_name",
   "icon_png_path",
   "zeywin_sdk_version",
+  "zeywin_api_key",
   "version_mode",
   "version_name",
   "version_code",
@@ -271,7 +272,14 @@ const SAFE_INPUT_KEYS = [
   "aab_version_code",
   "build_format",
   "fast_build",
-  "signing_profile"
+  "signing_profile",
+  "admob_android_app_id",
+  "admob_android_banner_id",
+  "admob_android_interstitial_id",
+  "admob_android_rewarded_id",
+  "admob_android_rewarded_interstitial_id",
+  "admob_android_native_id",
+  "admob_android_app_open_id"
 ];
 
 function sanitizeInputs(inputs) {
