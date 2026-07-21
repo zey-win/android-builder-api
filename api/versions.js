@@ -53,40 +53,61 @@ module.exports = async function handler(req, res) {
       if (!best || code > best.code) best = { code, b };
     }
 
-    // If best match has version_code "1" (the old hardcoded value),
-    // try to get real version from stored build inputs
-    let versionName = best ? safeString(best.b.version_name) : "";
-    let versionCode = best ? safeString(best.b.version_code) : "";
-    if (best && (!versionCode || versionCode === "1") && best.b.run_id) {
-      try {
-        const allInputs = await loadAllBuildInputs();
-        const stored = allInputs[String(best.b.run_id)];
-        if (stored) {
-          versionName = safeString(stored.aab_version_name || stored.version_name || versionName);
-          versionCode = safeString(stored.aab_version_code || stored.version_code || versionCode);
-        }
-      } catch {}
+    // Collect version candidates from all sources, pick the highest version_code
+    var candidates = [];
+
+    // 1. db.json entry (already best)
+    if (best) {
+      var vc = parseInt(best.b.version_code, 10);
+      if (!isNaN(vc) && vc > 1) {
+        candidates.push({ code: vc, name: safeString(best.b.version_name) });
+      }
     }
 
-    // Final fallback: read version from CI-CD latest-build.txt
-    if (!versionCode || versionCode === "1") {
+    // 2. stored build inputs (aab_version_name/code always saved in SAFE_INPUT_KEYS)
+    if (best && best.b.run_id) {
       try {
-        const raw = await fetch("https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
-        if (raw.ok) {
-          const text = await raw.text();
-          const mName = text.match(/^version_name=(.+)$/m);
-          const mCode = text.match(/^version_code=(.+)$/m);
-          if (mCode && mCode[1] && mCode[1] !== "1") {
-            versionName = mName ? mName[1] : versionName;
-            versionCode = mCode[1];
+        var allInputs = await loadAllBuildInputs();
+        var stored = allInputs[String(best.b.run_id)];
+        if (stored) {
+          var svc = parseInt(stored.aab_version_code || stored.version_code, 10);
+          if (!isNaN(svc) && svc > 1) {
+            candidates.push({ code: svc, name: safeString(stored.aab_version_name || stored.version_name) });
           }
         }
       } catch {}
     }
 
-    const fmt = safeString(best && best.b.build_format).toLowerCase();
-    const aab = fmt.includes("aab") ? { versionName, versionCode } : {};
-    const apk = fmt.includes("apk") ? { versionName, versionCode } : {};
+    // 3. ci-cd latest-build.txt
+    try {
+      var raw = await fetch("https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
+      if (raw.ok) {
+        var text = await raw.text();
+        var mName = text.match(/^version_name=(.+)$/m);
+        var mCode = text.match(/^version_code=(.+)$/m);
+        if (mCode) {
+          var cvc = parseInt(mCode[1], 10);
+          if (!isNaN(cvc) && cvc > 1) {
+            candidates.push({ code: cvc, name: mName ? mName[1] : "" });
+          }
+        }
+      }
+    } catch {}
+
+    // Pick candidate with highest version_code
+    var bestCandidate = null;
+    for (var i = 0; i < candidates.length; i++) {
+      if (!bestCandidate || candidates[i].code > bestCandidate.code) {
+        bestCandidate = candidates[i];
+      }
+    }
+
+    var versionName = bestCandidate ? bestCandidate.name : "";
+    var versionCode = bestCandidate ? String(bestCandidate.code) : "";
+
+    var fmt = safeString(best && best.b.build_format).toLowerCase();
+    var aab = fmt.includes("aab") ? { versionName, versionCode } : {};
+    var apk = fmt.includes("apk") ? { versionName, versionCode } : {};
 
     sendJson(req, res, 200, {
       ok: true,
