@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T12:11:47.431Z",
+  "updatedAt": "2026-07-21T20:23:33.146Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2662,6 +2662,28 @@
       "aab_version_name": "2.0",
       "aab_version_code": "2",
       "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-6988952582458184~4804049392",
+      "admob_android_banner_id": "ca-app-pub-6988952582458184/3882465916",
+      "admob_android_interstitial_id": "ca-app-pub-6988952582458184/4771360386",
+      "admob_android_rewarded_id": "ca-app-pub-6988952582458184/9789398710"
+    },
+    "29865543558": {
+      "builder_request_id": "builder-mrv3paye",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.socialapps.plinko",
+      "app_name": "Plinko",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/com.socialapps.plinko.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_8d59f9c3003702276e42bd69f07ea8988c77be6ecf5f953f",
+      "version_mode": "auto_next",
+      "version_name": "30.0",
+      "version_code": "52",
+      "aab_version_name": "30.0",
+      "aab_version_code": "52",
+      "build_format": "apk",
       "fast_build": "true",
       "signing_profile": "playmax",
       "admob_android_app_id": "ca-app-pub-6988952582458184~4804049392",
