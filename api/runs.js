@@ -285,7 +285,13 @@ module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
   try {
-    const pathName = new URL(req.url, "http://localhost").pathname;
+    let pathName = "/";
+    try {
+      const url = new URL(req.url, "http://localhost");
+      pathName = url.pathname;
+    } catch (e) {
+      pathName = req.url || "/";
+    }
     
     // Track all requests
     trackVisitor(req);
