@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T20:23:33.146Z",
+  "updatedAt": "2026-07-21T20:24:01.292Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2690,6 +2690,28 @@
       "admob_android_banner_id": "ca-app-pub-6988952582458184/3882465916",
       "admob_android_interstitial_id": "ca-app-pub-6988952582458184/4771360386",
       "admob_android_rewarded_id": "ca-app-pub-6988952582458184/9789398710"
+    },
+    "29865579329": {
+      "builder_request_id": "builder-mrv3pyku",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.plinkofun",
+      "app_name": "Plinko: Real Money",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/com.playsocialgames.plinkofun.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_5deabf1b2a9e7b450d9e9b5260a31374dcb6e62d20053c4b",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "44.0",
+      "aab_version_code": "44",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-6988952582458184~6613433438",
+      "admob_android_banner_id": "ca-app-pub-6988952582458184/4530693980",
+      "admob_android_interstitial_id": "ca-app-pub-6988952582458184/9211185343",
+      "admob_android_rewarded_id": "ca-app-pub-6988952582458184/7061184633"
     }
   }
 }
