@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T20:24:09.622Z",
+  "updatedAt": "2026-07-21T20:24:12.805Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2756,6 +2756,28 @@
       "admob_android_banner_id": "ca-app-pub-6988952582458184/3806931993",
       "admob_android_interstitial_id": "ca-app-pub-6988952582458184/8952176419",
       "admob_android_rewarded_id": "ca-app-pub-6988952582458184/9223639151"
+    },
+    "29865581450": {
+      "builder_request_id": "builder-mrv3pzth",
+      "game_repository": "zey-win/SlotSpot",
+      "game_ref": "main",
+      "package_name": "com.playmaxsolutions.slotspot",
+      "app_name": "SlotSpot",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__SlotSpot.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_7b07dc24806408f6e655dcf0422e15c5e028d40d440b3e1a",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "14.0",
+      "aab_version_code": "26",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-1585565865476548~5854522209",
+      "admob_android_banner_id": "ca-app-pub-1585565865476548/2893595529",
+      "admob_android_interstitial_id": "ca-app-pub-1585565865476548/2521834122",
+      "admob_android_rewarded_id": "ca-app-pub-1585565865476548/7091315351"
     }
   }
 }
