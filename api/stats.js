@@ -228,6 +228,17 @@ module.exports = async function handler(req, res) {
       return;
     }
     
+    if (pathName === '/api/stats' || pathName === '/api/stats/') {
+      if (req.method !== 'GET') {
+        sendJson(req, res, 405, { ok: false, error: 'Method not allowed' });
+        return;
+      }
+      
+      const stats = await getVisitorStats();
+      sendJson(req, res, 200, stats);
+      return;
+    }
+    
     sendJson(req, res, 404, { ok: false, error: 'Not found' });
   } catch (err) {
     sendJson(req, res, 500, errorPayload(err));
