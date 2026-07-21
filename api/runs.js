@@ -285,7 +285,7 @@ module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
   try {
-    const pathName = new URL(req.url).pathname;
+    const pathName = new URL(req.url, "http://localhost").pathname;
     
     // Track all requests
     trackVisitor(req);
