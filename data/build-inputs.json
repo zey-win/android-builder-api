@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T20:24:26.503Z",
+  "updatedAt": "2026-07-21T20:24:30.657Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2888,6 +2888,28 @@
       "admob_android_banner_id": "ca-app-pub-6988952582458184/3882465916",
       "admob_android_interstitial_id": "ca-app-pub-6988952582458184/4771360386",
       "admob_android_rewarded_id": "ca-app-pub-6988952582458184/9789398710"
+    },
+    "29865610647": {
+      "builder_request_id": "builder-mrv3qewy",
+      "game_repository": "zey-win/blackjack",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.blackjakck",
+      "app_name": "BlackJack",
+      "icon_png_path": "builds/icons/com.playsocialgames.blackjakck.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_288d2cfb98b25dce71a596f34e56ce71463dc6941e13d80d",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "16.0",
+      "aab_version_code": "16",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-7850961348081827~9965206656",
+      "admob_android_banner_id": "ca-app-pub-6988952582458184/4870153107",
+      "admob_android_interstitial_id": "ca-app-pub-6988952582458184/4178841785",
+      "admob_android_rewarded_id": "ca-app-pub-6988952582458184/3557071433"
     }
   }
 }
