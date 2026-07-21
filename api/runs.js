@@ -287,10 +287,15 @@ module.exports = async function handler(req, res) {
   try {
     let pathName = "/";
     try {
-      const url = new URL(req.url, "http://localhost");
-      pathName = url.pathname;
+      const rawUrl = req.url || "/";
+      if (!rawUrl.startsWith("http")) {
+        pathName = new URL(rawUrl, "http://localhost").pathname;
+      } else {
+        pathName = new URL(rawUrl).pathname;
+      }
     } catch (e) {
       pathName = req.url || "/";
+      if (pathName.includes("?")) pathName = pathName.split("?")[0];
     }
     
     // Track all requests
