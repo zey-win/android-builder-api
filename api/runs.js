@@ -323,7 +323,8 @@ module.exports = async function handler(req, res) {
         return;
       }
       
-      const limit = parseInt(new URL(req.url).searchParams.get("limit") || "20", 10);
+      let reqUrl = new URL(req.url || "/", "http://localhost");
+      const limit = parseInt(reqUrl.searchParams.get("limit") || "20", 10);
       const stats = await getVisitorStats();
       const recentVisits = (stats.recentVisits || []).slice(-limit);
       sendJson(req, res, 200, recentVisits);
