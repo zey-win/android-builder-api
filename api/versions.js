@@ -2,6 +2,7 @@ const {
   errorPayload,
   githubFetch,
   handleOptions,
+  loadAllBuildInputs,
   safeString,
   sendJson
 } = require("./_shared");
@@ -45,9 +46,22 @@ module.exports = async function handler(req, res) {
       if (!best || code > best.code) best = { code, b };
     }
 
+    // If best match has version_code "1" (the old hardcoded value),
+    // try to get real version from stored build inputs
+    let versionName = best ? safeString(best.b.version_name) : "";
+    let versionCode = best ? safeString(best.b.version_code) : "";
+    if (best && (!versionCode || versionCode === "1") && best.b.run_id) {
+      try {
+        const allInputs = await loadAllBuildInputs();
+        const stored = allInputs[String(best.b.run_id)];
+        if (stored) {
+          versionName = safeString(stored.aab_version_name || stored.version_name || versionName);
+          versionCode = safeString(stored.aab_version_code || stored.version_code || versionCode);
+        }
+      } catch {}
+    }
+
     const fmt = safeString(best && best.b.build_format).toLowerCase();
-    const versionName = best ? safeString(best.b.version_name) : "";
-    const versionCode = best ? safeString(best.b.version_code) : "";
     const aab = fmt.includes("aab") ? { versionName, versionCode } : {};
     const apk = fmt.includes("apk") ? { versionName, versionCode } : {};
 
