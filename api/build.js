@@ -581,8 +581,8 @@ module.exports = async function handler(req, res) {
         app_name: appName,
         game_repository: gameRepository,
         build_format: inputs.build_format,
-        version_name: inputs.version_name,
-        version_code: inputs.version_code,
+        version_name: inputs.aab_version_name || inputs.version_name,
+        version_code: inputs.aab_version_code || inputs.version_code,
         status: "queued",
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString()
