@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T20:24:12.805Z",
+  "updatedAt": "2026-07-21T20:24:15.164Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2778,6 +2778,28 @@
       "admob_android_banner_id": "ca-app-pub-1585565865476548/2893595529",
       "admob_android_interstitial_id": "ca-app-pub-1585565865476548/2521834122",
       "admob_android_rewarded_id": "ca-app-pub-1585565865476548/7091315351"
+    },
+    "29865582231": {
+      "builder_request_id": "builder-mrv3q0uy",
+      "game_repository": "zey-win/wheel-of-fortune",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.luckywheel",
+      "app_name": "Lucky Wheel",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__wheel-of-fortune.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_183a2bdbf64b64dc54e4a8bc81c577fd39358117e7a5aea6",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "11.0",
+      "aab_version_code": "11",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-6988952582458184~4630479952",
+      "admob_android_banner_id": "ca-app-pub-6988952582458184/3285608694",
+      "admob_android_interstitial_id": "ca-app-pub-6988952582458184/7089122332",
+      "admob_android_rewarded_id": "ca-app-pub-6988952582458184/7968532690"
     }
   }
 }
