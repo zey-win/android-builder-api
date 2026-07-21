@@ -287,15 +287,19 @@ module.exports = async function handler(req, res) {
   try {
     let pathName = "/";
     try {
-      const rawUrl = req.url || "/";
-      if (!rawUrl.startsWith("http")) {
-        pathName = new URL(rawUrl, "http://localhost").pathname;
+      const rawUrl = (req.url || "/").toString();
+      let url;
+      if (rawUrl.startsWith("http://") || rawUrl.startsWith("https://")) {
+        url = new URL(rawUrl);
+      } else if (rawUrl.startsWith("//")) {
+        url = new URL("http:" + rawUrl);
       } else {
-        pathName = new URL(rawUrl).pathname;
+        url = new URL(rawUrl, "http://localhost");
       }
+      pathName = url.pathname;
     } catch (e) {
-      pathName = req.url || "/";
-      if (pathName.includes("?")) pathName = pathName.split("?")[0];
+      const raw = (req.url || "/").toString();
+      pathName = raw.split("?")[0].split("#")[0] || "/";
     }
     
     // Track all requests
