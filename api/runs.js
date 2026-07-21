@@ -12,7 +12,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
-const STATS_FILE = path.join(__dirname, "../zey-win.github.io/visitor-stats.json");
+const STATS_FILE = "/tmp/visitor-stats.json";
 
 // Releases in ci-cd are tagged `android-<runNumber>-<runAttempt>` and their
 // title contains the version code (e.g. "APK com.x v12"). We use that to show
