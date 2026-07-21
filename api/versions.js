@@ -68,6 +68,22 @@ module.exports = async function handler(req, res) {
       } catch {}
     }
 
+    // Final fallback: read version from CI-CD latest-build.txt
+    if (!versionCode || versionCode === "1") {
+      try {
+        const raw = await fetch("https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
+        if (raw.ok) {
+          const text = await raw.text();
+          const mName = text.match(/^version_name=(.+)$/m);
+          const mCode = text.match(/^version_code=(.+)$/m);
+          if (mCode && mCode[1] && mCode[1] !== "1") {
+            versionName = mName ? mName[1] : versionName;
+            versionCode = mCode[1];
+          }
+        }
+      } catch {}
+    }
+
     const fmt = safeString(best && best.b.build_format).toLowerCase();
     const aab = fmt.includes("aab") ? { versionName, versionCode } : {};
     const apk = fmt.includes("apk") ? { versionName, versionCode } : {};
