@@ -126,6 +126,15 @@ module.exports = async function handler(req, res) {
   try {
     requireOperator(req);
 
+    var inputsRunId = safeString(req.query?.inputs);
+    if (inputsRunId) {
+      var ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      var data = await githubFetch("/repos/" + ciRepository + "/actions/runs/" + inputsRunId);
+      var inputs = data.event && data.event.inputs ? data.event.inputs : {};
+      sendJson(req, res, 200, { ok: true, inputs: inputs });
+      return;
+    }
+
     let requestId = safeString(req.query?.request_id);
     if (req.method === "POST") {
       const body = await readJson(req, 100_000);
