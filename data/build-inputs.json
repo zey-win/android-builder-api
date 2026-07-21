@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T12:11:38.728Z",
+  "updatedAt": "2026-07-21T12:11:41.650Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2602,6 +2602,28 @@
       "admob_android_banner_id": "ca-app-pub-6988952582458184/3285608694",
       "admob_android_interstitial_id": "ca-app-pub-6988952582458184/7089122332",
       "admob_android_rewarded_id": "ca-app-pub-6988952582458184/7968532690"
+    },
+    "29829082542": {
+      "builder_request_id": "builder-mrum4kvn",
+      "game_repository": "zey-win/dragon-tiger",
+      "game_ref": "main",
+      "package_name": "com.PlayMaxSolutions.DragonTiger",
+      "app_name": "Baccarat Social",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/zey-win__dragon-tiger.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "8.0",
+      "aab_version_code": "8",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-7850961348081827~8967093407",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": "ca-app-pub-7850961348081827/6758080070"
     }
   }
 }
