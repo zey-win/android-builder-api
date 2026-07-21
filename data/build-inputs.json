@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T12:11:41.650Z",
+  "updatedAt": "2026-07-21T12:11:42.982Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2624,6 +2624,28 @@
       "admob_android_banner_id": "",
       "admob_android_interstitial_id": "",
       "admob_android_rewarded_id": "ca-app-pub-7850961348081827/6758080070"
+    },
+    "29829084772": {
+      "builder_request_id": "builder-mrum4jd7",
+      "game_repository": "zey-win/roulette",
+      "game_ref": "main",
+      "package_name": "com.playsocialgames.roulette",
+      "app_name": "Roulette",
+      "icon_png_path": "builds/icons/com.playsocialgames.roulette.png",
+      "zeywin_sdk_version": "v3.9.37",
+      "zeywin_api_key": "zw_183a2bdbf64b64dc54e4a8bc81c577fd39358117e7a5aea6",
+      "version_mode": "manual",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "15.0",
+      "aab_version_code": "15",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-6988952582458184~7106011191",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": ""
     }
   }
 }
