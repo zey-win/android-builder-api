@@ -91,9 +91,11 @@ async function findByRequestId(requestId) {
 
 async function listRecentRuns(workflowFileName) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const ciWorkflow = workflowFileName || process.env.CI_WORKFLOW || "build-apk.yml";
+  if (!workflowFileName) {
+    return [];
+  }
   const data = await githubFetch(
-    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=100`
+    `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(workflowFileName)}/runs?event=workflow_dispatch&per_page=100`
   );
 
   const hidden = await loadHiddenBuilds();
@@ -378,9 +380,12 @@ module.exports = async function handler(req, res) {
 
     if (!requestId) {
       var workflowParam = safeString(req.query?.workflow);
-      var workflowFile = workflowParam === "2"
-        ? (process.env.CI_WORKFLOW_2 || "")
-        : (process.env.CI_WORKFLOW || "build-apk.yml");
+      var workflowFile = "";
+      if (workflowParam === "2") {
+        workflowFile = process.env.CI_WORKFLOW_2 || "";
+      } else {
+        workflowFile = process.env.CI_WORKFLOW || "build-apk.yml";
+      }
       const runs = await listRecentRuns(workflowFile);
       sendJson(req, res, 200, { ok: true, runs });
       return;
