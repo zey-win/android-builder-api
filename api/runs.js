@@ -381,10 +381,10 @@ module.exports = async function handler(req, res) {
     if (!requestId) {
       var workflowParam = safeString(req.query?.workflow);
       var workflowFile = "";
-      if (workflowParam === "2") {
-        workflowFile = process.env.CI_WORKFLOW_2 || "";
-      } else {
+      if (workflowParam === "1") {
         workflowFile = process.env.CI_WORKFLOW || "build-apk.yml";
+      } else {
+        workflowFile = process.env.CI_WORKFLOW_2 || "";
       }
       const runs = await listRecentRuns(workflowFile);
       sendJson(req, res, 200, { ok: true, runs });
