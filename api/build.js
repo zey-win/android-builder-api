@@ -44,6 +44,74 @@ const WORKFLOW_INPUT_KEYS = [
   "firebase_json_base64"
 ];
 
+const DB_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
+const DB_PATH = "db.json";
+
+async function getLatestVersionCode(packageName) {
+  let latest = 0;
+  try {
+    const dbData = await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`);
+    if (dbData && dbData.content) {
+      const dbText = Buffer.from(dbData.content, "base64").toString("utf8");
+      const db = JSON.parse(dbText);
+      const builds = Array.isArray(db.builds) ? db.builds : [];
+      for (const b of builds) {
+        if (safeString(b.package_name) === packageName) {
+          const code = parseInt(b.version_code || b.aab_version_code || "0", 10);
+          if (!isNaN(code) && code > latest) latest = code;
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Failed to load db for version check:", err && err.message);
+  }
+  try {
+    const raw = await fetch("https://raw.githubusercontent.com/" + DB_REPO + "/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
+    if (raw.ok) {
+      const text = await raw.text();
+      const m = text.match(/^version_code=(.+)$/m);
+      if (m) {
+        const ciCode = parseInt(m[1], 10);
+        if (!isNaN(ciCode) && ciCode > latest) latest = ciCode;
+      }
+    }
+  } catch {}
+  return latest;
+}
+
+async function bumpVersionIfNeeded(payload) {
+  const pkg = safeString(payload.package_name);
+  if (!pkg) return payload;
+  const versionCode = parseInt(payload.version_code, 10);
+  if (isNaN(versionCode)) return payload;
+  const versionName = safeString(payload.version_name);
+  const aabVersionCode = parseInt(payload.aab_version_code, 10);
+  const aabVersionName = safeString(payload.aab_version_name);
+  try {
+    const latest = await getLatestVersionCode(pkg);
+    if (versionCode <= latest) {
+      const bumpedCode = String(latest + 1);
+      payload.version_code = bumpedCode;
+      payload.aab_version_code = bumpedCode;
+      if (versionName && /^\d+$/.test(versionName)) {
+        payload.version_name = String(parseInt(versionName, 10) + 1);
+      } else if (versionName) {
+        payload.version_name = versionName + ".1";
+      }
+      if (!isNaN(aabVersionCode) && aabVersionCode <= latest) {
+        if (aabVersionName && /^\d+$/.test(aabVersionName)) {
+          payload.aab_version_name = String(parseInt(aabVersionName, 10) + 1);
+        } else if (aabVersionName) {
+          payload.aab_version_name = aabVersionName + ".1";
+        }
+      }
+    }
+  } catch (err) {
+    console.error("Version bump check failed:", err && err.message);
+  }
+  return payload;
+}
+
 function normalizePng(value) {
   const raw = safeString(value);
   if (!raw) return null;
@@ -545,6 +613,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    await bumpVersionIfNeeded(payload);
     const inputs = buildWorkflowInputs(
       {
         ...payload,
