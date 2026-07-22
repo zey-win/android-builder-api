@@ -9,16 +9,142 @@ const {
   sendJson
 } = require("../lib/shared");
 
-const fs = require("fs");
-const path = require("path");
+const { kv } = require("@vercel/kv");
 
-const STATS_FILE = process.env.STATS_FILE || "/tmp/visitor-stats.json";
+const STATS_KEY = "visitor-stats";
 
-// Releases in ci-cd are tagged `android-<runNumber>-<runAttempt>` and their
-// title contains the version code (e.g. "APK com.x v12"). We use that to show
-// version info on build cards for ANY historical run (no stored metadata needed).
-let releasesCache = { ts: 0, map: null };
-const RELEASES_TTL = 5 * 60 * 1000;
+async function getVisitorStats() {
+  try {
+    const data = await kv.get(STATS_KEY);
+    if (!data) {
+      const initialData = {
+        totalVisitors: 0,
+        uniqueVisitors: 0,
+        pageViews: 0,
+        dailyStats: {},
+        recentVisits: [],
+        topPages: {},
+        userAgentStats: {},
+        hourlyStats: []
+      };
+      await kv.set(STATS_KEY, initialData);
+      return initialData;
+    }
+    return data;
+  } catch (err) {
+    console.error("Failed to load visitor stats:", err);
+    return {
+      totalVisitors: 0,
+      uniqueVisitors: 0,
+      pageViews: 0,
+      dailyStats: {},
+      recentVisits: [],
+      topPages: {},
+      userAgentStats: {},
+      hourlyStats: []
+    };
+  }
+}
+
+async function trackVisitor(req) {
+  try {
+    const data = await kv.get(STATS_KEY) || {
+      totalVisitors: 0,
+      uniqueVisitors: 0,
+      pageViews: 0,
+      dailyStats: {},
+      recentVisits: [],
+      topPages: {},
+      userAgentStats: {},
+      hourlyStats: []
+    };
+
+    const now = new Date();
+    const today = now.toISOString().split("T")[0];
+    const hour = now.getHours();
+    const userAgent = req.headers["user-agent"] || "Unknown";
+    const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "Unknown";
+
+    data.totalVisitors = (data.totalVisitors || 0) + 1;
+    data.uniqueVisitors = (data.uniqueVisitors || 0) + 1;
+    data.pageViews = (data.pageViews || 0) + 1;
+
+    if (!data.dailyStats) data.dailyStats = {};
+    if (!data.dailyStats[today]) {
+      data.dailyStats[today] = {
+        visitors: 0,
+        pageViews: 0,
+        hourStats: Array(24).fill(0)
+      };
+    }
+    data.dailyStats[today].visitors += 1;
+    data.dailyStats[today].pageViews += 1;
+    data.dailyStats[today].hourStats[hour] += 1;
+
+    if (!data.hourlyStats) data.hourlyStats = [];
+    const existingHourStat = data.hourlyStats.find(h => h.hour === hour && h.date === today);
+    if (existingHourStat) {
+      existingHourStat.views += 1;
+    } else {
+      data.hourlyStats.push({
+        hour,
+        date: today,
+        views: 1
+      });
+    }
+
+    const pathName = req.originalUrl || req.url;
+    if (!data.topPages) data.topPages = {};
+    if (!data.topPages[pathName]) {
+      data.topPages[pathName] = {
+        views: 0,
+        uniqueIPs: new Set()
+      };
+    }
+    data.topPages[pathName].views += 1;
+    if (ip !== "Unknown") {
+      data.topPages[pathName].uniqueIPs.add(ip);
+    }
+
+    if (!data.userAgentStats) data.userAgentStats = {};
+    if (!data.userAgentStats[userAgent]) {
+      data.userAgentStats[userAgent] = {
+        views: 0,
+        visitors: 0
+      };
+    }
+    data.userAgentStats[userAgent].views += 1;
+    if (ip !== "Unknown") {
+      data.userAgentStats[userAgent].visitors += 1;
+    }
+
+    if (!data.recentVisits) data.recentVisits = [];
+    const recentVisit = {
+      id: `visit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: now.toISOString(),
+      ip: ip,
+      userAgent: userAgent,
+      path: pathName,
+      country: ip.includes(".") ? ip.split(".").slice(0, 2).join(".") + ".*.*" : "Unknown",
+      referrer: req.headers.referer || "Direct",
+      session: true,
+      device: detectDevice(userAgent),
+      browser: extractBrowser(userAgent)
+    };
+    data.recentVisits.push(recentVisit);
+
+    if (data.recentVisits.length > 100) {
+      data.recentVisits = data.recentVisits.slice(-100);
+    }
+
+    await kv.set(STATS_KEY, data);
+
+    return recentVisit;
+  } catch (err) {
+    console.error("Error tracking visitor:", err);
+    return null;
+  }
+}
 
 async function getReleasesVersionMap() {
   const now = Date.now();
@@ -126,150 +252,6 @@ async function listRecentRuns(workflowFileName) {
   });
 }
 
-// ===== STATS (merged from stats.js) =====
-function initStatsFile() {
-  if (!fs.existsSync(STATS_FILE)) {
-    const dir = path.dirname(STATS_FILE);
-    if (!fs.existsSync(dir)) {
-      fs.mkdirSync(dir, { recursive: true });
-    }
-    const initialData = {
-      totalVisitors: 0,
-      uniqueVisitors: 0,
-      pageViews: 0,
-      dailyStats: {},
-      recentVisits: [],
-      topPages: {},
-      userAgentStats: {},
-      hourlyStats: []
-    };
-    fs.writeFileSync(STATS_FILE, JSON.stringify(initialData, null, 2));
-  }
-}
-
-async function getVisitorStats() {
-  initStatsFile();
-  
-  try {
-    const data = JSON.parse(fs.readFileSync(STATS_FILE, "utf8"));
-    return {
-      totalVisitors: data.totalVisitors || 0,
-      uniqueVisitors: data.uniqueVisitors || 0,
-      pageViews: data.pageViews || 0,
-      dailyStats: data.dailyStats || {},
-      recentVisits: data.recentVisits || [],
-      topPages: data.topPages || {},
-      userAgentStats: data.userAgentStats || {},
-      hourlyStats: data.hourlyStats || []
-    };
-  } catch (err) {
-    console.error("Failed to load visitor stats:", err);
-    return {
-      totalVisitors: 0,
-      uniqueVisitors: 0,
-      pageViews: 0,
-      dailyStats: {},
-      recentVisits: [],
-      topPages: {},
-      userAgentStats: {},
-      hourlyStats: []
-    };
-  }
-}
-
-function trackVisitor(req) {
-  initStatsFile();
-  
-  try {
-    const data = JSON.parse(fs.readFileSync(STATS_FILE, "utf8"));
-    
-    const now = new Date();
-    const today = now.toISOString().split("T")[0];
-    const hour = now.getHours();
-    const userAgent = req.headers["user-agent"] || "Unknown";
-    const ip = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "Unknown";
-    
-    data.totalVisitors = (data.totalVisitors || 0) + 1;
-    data.uniqueVisitors = (data.uniqueVisitors || 0) + 1;
-    data.pageViews = (data.pageViews || 0) + 1;
-    
-    if (!data.dailyStats) data.dailyStats = {};
-    if (!data.dailyStats[today]) {
-      data.dailyStats[today] = {
-        visitors: 0,
-        pageViews: 0,
-        hourStats: Array(24).fill(0)
-      };
-    }
-    data.dailyStats[today].visitors += 1;
-    data.dailyStats[today].pageViews += 1;
-    data.dailyStats[today].hourStats[hour] += 1;
-    
-    if (!data.hourlyStats) data.hourlyStats = [];
-    const existingHourStat = data.hourlyStats.find(h => h.hour === hour && h.date === today);
-    if (existingHourStat) {
-      existingHourStat.views += 1;
-    } else {
-      data.hourlyStats.push({
-        hour,
-        date: today,
-        views: 1
-      });
-    }
-    
-    const pathName = req.originalUrl || req.url;
-    if (!data.topPages) data.topPages = {};
-    if (!data.topPages[pathName]) {
-      data.topPages[pathName] = {
-        views: 0,
-        uniqueIPs: new Set()
-      };
-    }
-    data.topPages[pathName].views += 1;
-    if (ip !== "Unknown") {
-      data.topPages[pathName].uniqueIPs.add(ip);
-    }
-    
-    if (!data.userAgentStats) data.userAgentStats = {};
-    if (!data.userAgentStats[userAgent]) {
-      data.userAgentStats[userAgent] = {
-        views: 0,
-        visitors: 0
-      };
-    }
-    data.userAgentStats[userAgent].views += 1;
-    if (ip !== "Unknown") {
-      data.userAgentStats[userAgent].visitors += 1;
-    }
-    
-    if (!data.recentVisits) data.recentVisits = [];
-    const recentVisit = {
-      id: `visit_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: now.toISOString(),
-      ip: ip,
-      userAgent: userAgent,
-      path: pathName,
-      country: ip.includes(".") ? ip.split(".").slice(0, 2).join(".") + ".*.*" : "Unknown",
-      referrer: req.headers.referer || "Direct",
-      session: true,
-      device: detectDevice(userAgent),
-      browser: extractBrowser(userAgent)
-    };
-    data.recentVisits.push(recentVisit);
-    
-    if (data.recentVisits.length > 100) {
-      data.recentVisits = data.recentVisits.slice(-100);
-    }
-    
-    fs.writeFileSync(STATS_FILE, JSON.stringify(data, null, 2));
-    
-    return recentVisit;
-  } catch (err) {
-    console.error("Error tracking visitor:", err);
-    return null;
-  }
-}
-
 function detectDevice(userAgent) {
   if (/iPhone|iPad|iPod/.test(userAgent)) return "iOS";
   if (/Android/.test(userAgent)) return "Android";
@@ -309,7 +291,7 @@ module.exports = async function handler(req, res) {
     }
     
     // Track all requests
-    trackVisitor(req);
+    trackVisitor(req).catch(console.error);
     
     // Handle stats endpoints
     if (pathName === "/api/stats/visitor-counts" || pathName === "/api/stats/visitor-counts/") {

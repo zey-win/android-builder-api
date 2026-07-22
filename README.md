@@ -20,7 +20,8 @@ Required production environment variables:
 - `OPENAI_API_KEY`: optional; required only for `/api/generate-icon`.
 - `OPENAI_IMAGE_MODEL`: optional, defaults to `gpt-image-1`.
 - `OPENAI_IMAGE_SIZE`: optional, defaults to `1024x1024`.
-- `STATS_FILE`: optional path for visitor stats JSON file. On Vercel serverless, `/tmp` is ephemeral. For persistent stats, mount a volume and set this env var (e.g. `/app/data/visitor-stats.json`).
+
+Visitor stats are stored in Vercel KV (`@vercel/kv`). Add the Vercel KV integration to your project for persistent visitor counts across serverless invocations.
 
 Required GitHub Actions secrets in `CI_REPOSITORY`:
 
