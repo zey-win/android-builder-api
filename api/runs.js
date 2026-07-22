@@ -101,10 +101,10 @@ async function trackVisitor(req) {
         uniqueIPs: []
       };
     }
-      data.topPages[pathName].views += 1;
-      if (ip !== "Unknown" && !data.topPages[pathName].uniqueIPs.includes(ip)) {
-        data.topPages[pathName].uniqueIPs.push(ip);
-      }
+    data.topPages[pathName].views += 1;
+    if (ip !== "Unknown" && !data.topPages[pathName].uniqueIPs.includes(ip)) {
+      data.topPages[pathName].uniqueIPs.push(ip);
+    }
 
     if (!data.userAgentStats) data.userAgentStats = {};
     if (!data.userAgentStats[userAgent]) {
