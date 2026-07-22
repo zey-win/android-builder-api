@@ -39,6 +39,17 @@ async function handleDelete(req, res) {
     throw error;
   }
 
+  if (runId) {
+    try {
+      const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}/cancel`, {
+        method: "POST"
+      });
+    } catch (cancelErr) {
+      console.error("Failed to cancel workflow run:", cancelErr && cancelErr.message);
+    }
+  }
+
   await addHiddenBuild({ requestId, runId });
 
   sendJson(req, res, 200, {
