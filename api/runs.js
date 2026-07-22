@@ -12,7 +12,7 @@ const {
 const fs = require("fs");
 const path = require("path");
 
-const STATS_FILE = "/tmp/visitor-stats.json";
+const STATS_FILE = process.env.STATS_FILE || "/tmp/visitor-stats.json";
 
 // Releases in ci-cd are tagged `android-<runNumber>-<runAttempt>` and their
 // title contains the version code (e.g. "APK com.x v12"). We use that to show
@@ -129,6 +129,10 @@ async function listRecentRuns(workflowFileName) {
 // ===== STATS (merged from stats.js) =====
 function initStatsFile() {
   if (!fs.existsSync(STATS_FILE)) {
+    const dir = path.dirname(STATS_FILE);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
     const initialData = {
       totalVisitors: 0,
       uniqueVisitors: 0,
