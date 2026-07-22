@@ -89,9 +89,9 @@ async function findByRequestId(requestId) {
   return attachVersion(mapped, versionFromRelease(mapped, releasesMap));
 }
 
-async function listRecentRuns() {
+async function listRecentRuns(workflowFileName) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
+  const ciWorkflow = workflowFileName || process.env.CI_WORKFLOW || "build-apk.yml";
   const data = await githubFetch(
     `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=100`
   );
@@ -377,7 +377,11 @@ module.exports = async function handler(req, res) {
     }
 
     if (!requestId) {
-      const runs = await listRecentRuns();
+      var workflowParam = safeString(req.query?.workflow);
+      var workflowFile = workflowParam === "2"
+        ? (process.env.CI_WORKFLOW_2 || "")
+        : (process.env.CI_WORKFLOW || "build-apk.yml");
+      const runs = await listRecentRuns(workflowFile);
       sendJson(req, res, 200, { ok: true, runs });
       return;
     }
