@@ -115,9 +115,12 @@ module.exports = async function handler(req, res) {
       versionName = latestBuild.name || String(nextCode);
       if (!/^\d+/.test(versionName)) versionName = String(nextCode);
     } else {
-      // Fallback: count workflow runs for this package
       const runCount = await countWorkflowRuns(packageName);
-      nextCode = Math.max(1, runCount) + 1;
+      if (runCount > 0) {
+        nextCode = runCount + 1;
+      } else {
+        nextCode = 1;
+      }
       versionName = String(nextCode);
     }
     
