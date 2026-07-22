@@ -412,12 +412,9 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function dispatchWorkflow(inputs, mode) {
+async function dispatchWorkflow(inputs) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const isAdmin = String(mode || "").toLowerCase() === "admin";
-  const ciWorkflow = isAdmin
-    ? process.env.CI_WORKFLOW_2 || "build-admin.yml"
-    : process.env.CI_WORKFLOW || "build-apk.yml";
+  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
   const ciRef = process.env.CI_REF || "main";
 
   await githubFetch(`/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/dispatches`, {
@@ -622,10 +619,8 @@ module.exports = async function handler(req, res) {
     const dispatchStartedAt = new Date();
     // eslint-disable-next-line no-console
     console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
-    const ciWorkflowForMode = String(buildMode || "").toLowerCase() === "admin"
-      ? process.env.CI_WORKFLOW_2 || "build-admin.yml"
-      : process.env.CI_WORKFLOW || "build-apk.yml";
-    const dispatch = await dispatchWorkflow(inputs, buildMode);
+    const ciWorkflowForMode = process.env.CI_WORKFLOW || "build-apk.yml";
+    const dispatch = await dispatchWorkflow(inputs);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, workflowFile: ciWorkflowForMode });
 
     // Record build in centralized DB (/api/configs = db.json)
