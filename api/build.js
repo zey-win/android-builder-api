@@ -50,22 +50,6 @@ const DB_PATH = "db.json";
 async function getLatestVersionCode(packageName) {
   let latest = 0;
   try {
-    const dbData = await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`);
-    if (dbData && dbData.content) {
-      const dbText = Buffer.from(dbData.content, "base64").toString("utf8");
-      const db = JSON.parse(dbText);
-      const builds = Array.isArray(db.builds) ? db.builds : [];
-      for (const b of builds) {
-        if (safeString(b.package_name) === packageName) {
-          const code = parseInt(b.version_code || b.aab_version_code || "0", 10);
-          if (!isNaN(code) && code > latest) latest = code;
-        }
-      }
-    }
-  } catch (err) {
-    console.error("Failed to load db for version check:", err && err.message);
-  }
-  try {
     const raw = await fetch("https://raw.githubusercontent.com/" + DB_REPO + "/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
     if (raw.ok) {
       const text = await raw.text();
