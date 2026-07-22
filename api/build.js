@@ -412,9 +412,10 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function dispatchWorkflow(inputs) {
+async function dispatchWorkflow(inputs, mode) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
+  const isAdmin = String(mode || "").toLowerCase() === "admin";
+  const ciWorkflow = isAdmin ? "build-admin.yml" : "build-apk.yml";
   const ciRef = process.env.CI_REF || "main";
 
   await githubFetch(`/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/dispatches`, {
@@ -432,9 +433,10 @@ async function dispatchWorkflow(inputs) {
   };
 }
 
-async function findWorkflowRun({ requestId, createdAfter, workflowFile }) {
+async function findWorkflowRun({ requestId, createdAfter, mode }) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const ciWorkflow = workflowFile || process.env.CI_WORKFLOW || "build-apk.yml";
+  const isAdmin = String(mode || "").toLowerCase() === "admin";
+  const ciWorkflow = isAdmin ? "build-admin.yml" : "build-apk.yml";
   const createdAt = new Date(createdAfter.getTime() - 15_000);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -619,9 +621,11 @@ module.exports = async function handler(req, res) {
     const dispatchStartedAt = new Date();
     // eslint-disable-next-line no-console
     console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
-    const ciWorkflowForMode = process.env.CI_WORKFLOW || "build-apk.yml";
-    const dispatch = await dispatchWorkflow(inputs);
-    const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, workflowFile: ciWorkflowForMode });
+    const ciWorkflowForMode = String(buildMode || "").toLowerCase() === "admin"
+      ? "build-admin.yml"
+      : "build-apk.yml";
+    const dispatch = await dispatchWorkflow(inputs, buildMode);
+    const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode });
 
     // Record build in centralized DB (/api/configs = db.json)
     try {
