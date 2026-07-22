@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-21T20:24:30.657Z",
+  "updatedAt": "2026-07-22T06:42:29.539Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2910,6 +2910,28 @@
       "admob_android_banner_id": "ca-app-pub-6988952582458184/4870153107",
       "admob_android_interstitial_id": "ca-app-pub-6988952582458184/4178841785",
       "admob_android_rewarded_id": "ca-app-pub-6988952582458184/3557071433"
+    },
+    "29897617186": {
+      "builder_request_id": "builder-mrvpt7p0",
+      "game_repository": "vladleopold/blackjack_sony",
+      "game_ref": "main",
+      "package_name": "com.socgame.black",
+      "app_name": "black",
+      "icon_png_path": "builds/icons/com.socgame.black.png",
+      "zeywin_sdk_version": "v3.9.39",
+      "zeywin_api_key": "",
+      "version_mode": "auto_next",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "1",
+      "aab_version_code": "1",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": ""
     }
   }
 }
