@@ -60,6 +60,13 @@ function sendJson(req, res, status, payload) {
   res.end(JSON.stringify(payload));
 }
 
+function sendError(req, res, status, error) {
+  setCors(req, res);
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json; charset=utf-8");
+  res.end(JSON.stringify({ ok: false, error: error && error.message ? error.message : String(error) }));
+}
+
 function requireOperator(req) {
   return;
 }
@@ -75,13 +82,8 @@ function requireToken() {
 }
 
 function isAllowedRepo(repo) {
-  const allowed = getAllowedRepos();
-  if (allowed.length > 0 && allowed.includes(repo)) {
-    return true;
-  }
-
-  const org = getGithubOrg();
-  return repo.startsWith(`${org}/`);
+  if (!repo || !/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repo)) return false;
+  return true;
 }
 
 function assertRepo(repo) {
@@ -429,6 +431,7 @@ module.exports = {
   requireOperator,
   safeString,
   sendJson,
+  sendError,
   setCors,
   loadHiddenBuilds,
   addHiddenBuild,
