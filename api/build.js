@@ -415,7 +415,7 @@ function sleep(ms) {
 async function dispatchWorkflow(inputs, mode) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
-  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-admin.yml";
+  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-site.yml";
   const ciRef = process.env.CI_REF || "main";
 
   await githubFetch(`/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/dispatches`, {
@@ -436,7 +436,7 @@ async function dispatchWorkflow(inputs, mode) {
 async function findWorkflowRun({ requestId, createdAfter, mode }) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
-  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-admin.yml";
+  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-site.yml";
   const createdAt = new Date(createdAfter.getTime() - 15_000);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -623,7 +623,7 @@ module.exports = async function handler(req, res) {
     console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
     const ciWorkflowForMode = String(buildMode || "").toLowerCase() === "admin"
       ? "build-apk.yml"
-      : "build-admin.yml";
+      : "build-site.yml";
     const dispatch = await dispatchWorkflow(inputs, buildMode);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode });
 

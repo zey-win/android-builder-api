@@ -380,7 +380,7 @@ module.exports = async function handler(req, res) {
 
     if (!requestId) {
       var workflowParam = safeString(req.query?.workflow);
-      var workflowFile = workflowParam === "2" ? "build-apk.yml" : "build-admin.yml";
+      var workflowFile = workflowParam === "2" ? "build-apk.yml" : "build-site.yml";
       const runs = await listRecentRuns(workflowFile);
       sendJson(req, res, 200, { ok: true, runs });
       return;
