@@ -2,81 +2,15 @@ const {
   errorPayload, 
   githubFetch, 
   handleOptions, 
-  loadAllBuildInputs,
   safeString, 
   sendJson 
 } = require("./_shared");
 
+const CI_REPO = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+const CI_WORKFLOW = process.env.CI_WORKFLOW || "build-apk.yml";
+
 const DB_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
 const DB_PATH = "db.json";
-
-let versionCountCache = new Map();
-
-async function loadVersionCountCache() {
-  if (versionCountCache.size > 0) return versionCountCache;
-  
-  const db = await loadDb();
-  const builds = Array.isArray(db.builds) ? db.builds : [];
-  
-  const versionMap = new Map();
-  for (const build of builds) {
-    const pkg = safeString(build.package_name);
-    if (!pkg) continue;
-    
-    const runs = await loadAllRunsForPackage(pkg);
-    if (runs.length > 0) {
-      versionMap.set(pkg, runs.length);
-    }
-  }
-  
-  versionCountCache = versionMap;
-  return versionCountCache;
-}
-
-async function loadAllRunsForPackage(packageName) {
-  const runs = [];
-  const ciRepo = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-  const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
-  
-  try {
-    const data = await githubFetch(
-      `/repos/${ciRepo}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=50`
-    );
-    
-    const workflowRuns = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
-    const matchingRuns = workflowRuns.filter(run => {
-      const displayTitle = `${run.display_title || ''} ${run.name || ''}`;
-      return displayTitle.includes(packageName);
-    });
-    
-    runs.push(...matchingRuns);
-  } catch (err) {
-    console.error("Failed to load runs for version count", err && err.message);
-  }
-  
-  return runs;
-}
-
-async function loadDb() {
-  try {
-    const data = await githubFetch(`/repos/${DB_REPO}/contents/${DB_PATH}`);
-    let text = null;
-    if (data && data.content) {
-      text = Buffer.from(data.content, "base64").toString("utf8");
-    } else if (data && data.download_url) {
-      const raw = await fetch(data.download_url);
-      if (raw.ok) text = await raw.text();
-    }
-    if (text) {
-      return JSON.parse(text);
-    }
-  } catch (err) {
-    if (err.statusCode !== 404) {
-      console.error("loadDb failed", err && err.message);
-    }
-  }
-  return { games: [], icons: [], builds: [], updated_at: null };
-}
 
 function normalizeTag(tag) {
   const raw = safeString(tag);
@@ -95,6 +29,40 @@ function compareTagsAsc(left, right) {
   return 0;
 }
 
+async function loadLatestBuildFromCiCd(packageName) {
+  try {
+    const url = `https://raw.githubusercontent.com/${CI_REPO}/main/builds/${encodeURIComponent(packageName)}/latest-build.txt`;
+    const raw = await fetch(url);
+    if (!raw.ok) return null;
+    const text = await raw.text();
+    const mName = text.match(/^version_name=(.+)$/m);
+    const mCode = text.match(/^version_code=(.+)$/m);
+    if (!mCode) return null;
+    const code = parseInt(mCode[1], 10);
+    return {
+      code: isNaN(code) ? null : code,
+      name: mName ? mName[1].trim() : ""
+    };
+  } catch {
+    return null;
+  }
+}
+
+async function countWorkflowRuns(packageName) {
+  try {
+    const data = await githubFetch(
+      `/repos/${CI_REPO}/actions/workflows/${encodeURIComponent(CI_WORKFLOW)}/runs?event=workflow_dispatch&per_page=50`
+    );
+    const workflowRuns = Array.isArray(data.workflow_runs) ? data.workflow_runs : [];
+    return workflowRuns.filter(run => {
+      const title = `${run.display_title || ''} ${run.name || ''}`;
+      return title.includes(packageName);
+    }).length;
+  } catch {
+    return 0;
+  }
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -107,8 +75,6 @@ module.exports = async function handler(req, res) {
         sendJson(req, res, 405, { ok: false, error: "Method not allowed." });
         return;
       }
-
-      requireOperator(req);
 
       const repository = safeString(req.query?.repository, "zey-win/ZeyWinAdsSDK-Unity");
       const minVersion = normalizeTag(req.query?.min_version, "v3.9.37");
@@ -138,64 +104,24 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    const db = await loadDb();
-    const builds = Array.isArray(db.builds) ? db.builds : [];
-    const matches = builds.filter((b) => safeString(b.package_name) === packageName);
-
-    const versionCount = await loadVersionCountCache();
-    const count = versionCount.get(packageName) || matches.length;
-    const baseVersion = Math.max(1, count);
+    // Fast path: check latest-build.txt in ci-cd repo
+    const latestBuild = await loadLatestBuildFromCiCd(packageName);
     
-    let best = null;
-    const candidates = [];
+    let nextCode;
+    let versionName;
     
-    for (const b of matches) {
-      const code = parseInt(b.version_code, 10);
-      if (isNaN(code)) continue;
-      candidates.push({ code, name: safeString(b.version_name), build: b });
-      if (!best || code > best.code) {
-        best = { code, name: safeString(b.version_name), build: b };
-      }
+    if (latestBuild && latestBuild.code > 0) {
+      nextCode = latestBuild.code + 1;
+      versionName = latestBuild.name || String(nextCode);
+      if (!/^\d+/.test(versionName)) versionName = String(nextCode);
+    } else {
+      // Fallback: count workflow runs for this package
+      const runCount = await countWorkflowRuns(packageName);
+      nextCode = Math.max(1, runCount) + 1;
+      versionName = String(nextCode);
     }
-
-    if (best && best.build && best.build.run_id) {
-      try {
-        const allInputs = await loadAllBuildInputs();
-        const stored = allInputs[String(best.build.run_id)];
-        if (stored) {
-          const svc = parseInt(stored.aab_version_code || stored.version_code, 10);
-          if (!isNaN(svc) && svc > 1) {
-            candidates.push({ code: svc, name: safeString(stored.aab_version_name || stored.version_name), build: stored });
-            if (!best || svc > best.code) {
-              best = { code: svc, name: safeString(stored.aab_version_name || stored.version_name), build: stored };
-            }
-          }
-        }
-      } catch {}
-    }
-
-    try {
-      const raw = await fetch("https://raw.githubusercontent.com/zey-win/ci-cd/main/builds/" + encodeURIComponent(packageName) + "/latest-build.txt");
-      if (raw.ok) {
-        const text = await raw.text();
-        const mName = text.match(/^version_name=(.+)$/m);
-        const mCode = text.match(/^version_code=(.+)$/m);
-        if (mCode) {
-          const cvc = parseInt(mCode[1], 10);
-          if (!isNaN(cvc) && cvc > 1) {
-            candidates.push({ code: cvc, name: mName ? mName[1] : "", source: "ci-cd" });
-            if (!best || cvc > best.code) {
-              best = { code: cvc, name: mName ? mName[1] : "", source: "ci-cd" };
-            }
-          }
-        }
-      }
-    } catch {}
-
-    var nextCode = best ? best.code + 1 : baseVersion + 1;
-    var versionName = best ? (best.name || String(nextCode)) : String(nextCode);
-    if (!/^\d+/.test(versionName)) versionName = String(nextCode);
-    var versionCode = String(nextCode);
+    
+    const versionCode = String(nextCode);
 
     var fmt = "apk_aab";
     var aab = fmt.includes("aab") ? { versionName, versionCode } : {};
@@ -208,11 +134,11 @@ module.exports = async function handler(req, res) {
       apk,
       versionName,
       versionCode,
-      candidates: candidates.map(c => ({
-        versionName: c.name,
-        versionCode: c.build ? String(c.build.version_name || c.build.aab_version_name || c.code) : String(c.code),
-        build: c.build
-      }))
+      candidates: latestBuild ? [{
+        versionName: latestBuild.name,
+        versionCode: String(latestBuild.code),
+        source: "ci-cd"
+      }] : []
     });
   } catch (err) {
     sendJson(req, res, 500, errorPayload(err));
