@@ -192,8 +192,10 @@ module.exports = async function handler(req, res) {
       }
     } catch {}
 
-    var versionName = best ? (best.name || baseVersion + ".0") : baseVersion + ".0";
-    var versionCode = best ? String(best.code) : String(baseVersion);
+    var nextCode = best ? best.code + 1 : baseVersion + 1;
+    var versionName = best ? (best.name || String(nextCode)) : String(nextCode);
+    if (!/^\d+/.test(versionName)) versionName = String(nextCode);
+    var versionCode = String(nextCode);
 
     var fmt = "apk_aab";
     var aab = fmt.includes("aab") ? { versionName, versionCode } : {};
