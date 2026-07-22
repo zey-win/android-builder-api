@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-22T08:08:44.644Z",
+  "updatedAt": "2026-07-22T08:25:39.676Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -2984,6 +2984,28 @@
       "package_name": "com.com.com",
       "app_name": "bl",
       "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/com.socialapps.plinko.png",
+      "zeywin_sdk_version": "v3.9.39",
+      "zeywin_api_key": "",
+      "version_mode": "auto_next",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "1",
+      "aab_version_code": "1",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": ""
+    },
+    "29903939499": {
+      "builder_request_id": "builder-mrvthuq5",
+      "game_repository": "vladleopold/unity-blackjack",
+      "game_ref": "main",
+      "package_name": "com.playsocgame.jack",
+      "app_name": "Blackjack_Blad",
+      "icon_png_path": "builds/icons/com.playsocgame.jack.png",
       "zeywin_sdk_version": "v3.9.39",
       "zeywin_api_key": "",
       "version_mode": "auto_next",
