@@ -12,6 +12,8 @@ const {
 const { kv } = require("@vercel/kv");
 
 const STATS_KEY = "visitor-stats";
+let releasesCache = { ts: 0, map: {} };
+const RELEASES_TTL = 5 * 60 * 1000;
 
 async function getVisitorStats() {
   try {
