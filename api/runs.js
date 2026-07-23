@@ -348,6 +348,41 @@ module.exports = async function handler(req, res) {
       return;
     }
     
+    // Handle artifact download proxy
+    if (pathName === "/api/artifact") {
+      var artifactRunId = safeString(req.query?.run_id);
+      var artifactName = safeString(req.query?.name);
+      if (!artifactRunId || !artifactName) {
+        sendJson(req, res, 400, { ok: false, error: "run_id and name required" });
+        return;
+      }
+      var ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      try {
+        var artifactsData = await githubFetch(`/repos/${ciRepository}/actions/runs/${artifactRunId}/artifacts`);
+        var artifacts = Array.isArray(artifactsData.artifacts) ? artifactsData.artifacts : [];
+        var artifact = artifacts.find(function(a) { return a.name === artifactName; });
+        if (!artifact) {
+          sendJson(req, res, 404, { ok: false, error: "Artifact not found" });
+          return;
+        }
+        var dlUrl = artifact.archive_download_url;
+        var resp = await fetch(dlUrl, {
+          headers: { "Authorization": "Bearer " + process.env.GITHUB_TOKEN, "User-Agent": "zeywin-android-builder-api" },
+          redirect: "manual"
+        });
+        if (resp.status >= 300 && resp.status < 400 && resp.headers.get("location")) {
+          res.writeHead(302, { "Location": resp.headers.get("location") });
+          res.end();
+        } else {
+          var text = await resp.text();
+          sendJson(req, res, 502, { ok: false, error: "No redirect from GitHub", body: text.slice(0, 500) });
+        }
+      } catch (e) {
+        sendJson(req, res, 500, { ok: false, error: e.message });
+      }
+      return;
+    }
+
     // Handle runs endpoints
     requireOperator(req);
 
