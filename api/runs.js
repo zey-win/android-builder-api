@@ -366,9 +366,16 @@ module.exports = async function handler(req, res) {
 
     if (!requestId) {
       var workflowParam = safeString(req.query?.workflow);
-      var workflowFile = workflowParam === "2" ? "build-apk.yml" : "build-site.yml";
-      const runs = await listRecentRuns(workflowFile);
-      sendJson(req, res, 200, { ok: true, runs });
+      var workflowFiles = workflowParam === "2"
+        ? ["build-apk.yml", "build-kupertino.yml"]
+        : ["build-site.yml"];
+      const allRuns = [];
+      for (const wf of workflowFiles) {
+        const runs = await listRecentRuns(wf);
+        allRuns.push(...runs);
+      }
+      allRuns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      sendJson(req, res, 200, { ok: true, runs: allRuns.slice(0, 50) });
       return;
     }
 
