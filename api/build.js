@@ -412,10 +412,11 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function dispatchWorkflow(inputs, mode) {
+async function dispatchWorkflow(inputs, mode, platform) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
-  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-site.yml";
+  const isKupertino = String(platform || "").toLowerCase() === "kupertino";
+  const ciWorkflow = isKupertino ? "build-kupertino.yml" : (isAdmin ? "build-apk.yml" : "build-site.yml");
   const ciRef = process.env.CI_REF || "main";
 
   await githubFetch(`/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/dispatches`, {
@@ -433,10 +434,11 @@ async function dispatchWorkflow(inputs, mode) {
   };
 }
 
-async function findWorkflowRun({ requestId, createdAfter, mode }) {
+async function findWorkflowRun({ requestId, createdAfter, mode, platform }) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
-  const ciWorkflow = isAdmin ? "build-apk.yml" : "build-site.yml";
+  const isKupertino = String(platform || "").toLowerCase() === "kupertino";
+  const ciWorkflow = isKupertino ? "build-kupertino.yml" : (isAdmin ? "build-apk.yml" : "build-site.yml");
   const createdAt = new Date(createdAfter.getTime() - 15_000);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -621,11 +623,13 @@ module.exports = async function handler(req, res) {
     const dispatchStartedAt = new Date();
     // eslint-disable-next-line no-console
     console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
-    const ciWorkflowForMode = String(buildMode || "").toLowerCase() === "admin"
-      ? "build-apk.yml"
-      : "build-site.yml";
-    const dispatch = await dispatchWorkflow(inputs, buildMode);
-    const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode });
+    const isKupertino = String(payload.platform || "").toLowerCase() === "kupertino";
+    const ciWorkflowForMode = isKupertino
+      ? "build-kupertino.yml"
+      : (String(buildMode || "").toLowerCase() === "admin" ? "build-apk.yml" : "build-site.yml");
+    const kupertinoPlatform = payload.platform === "kupertino" ? "kupertino" : "";
+    const dispatch = await dispatchWorkflow(inputs, buildMode, kupertinoPlatform);
+    const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode, platform: kupertinoPlatform });
 
     // Record build in centralized DB (/api/configs = db.json)
     try {
