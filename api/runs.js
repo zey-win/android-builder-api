@@ -6,13 +6,68 @@ const {
   readJson,
   requireOperator,
   safeString,
-  sendJson
+  sendJson,
+  setCors
 } = require("../lib/shared");
 
 const { kv } = require("@vercel/kv");
 
 const STATS_KEY = "visitor-stats";
 let releasesCache = { ts: 0, map: {} };
+
+function parseZipLocalFileHeaders(buffer) {
+  const files = [];
+  let offset = 0;
+  const data = Buffer.from(buffer);
+
+  while (offset < data.length) {
+    const sig = data.readUInt32LE(offset);
+    if (sig !== 0x04034b50) break;
+
+    const compMethod = data.readUInt16LE(offset + 8);
+    const compSize = data.readUInt32LE(offset + 18);
+    const uncompSize = data.readUInt32LE(offset + 22);
+    const nameLen = data.readUInt16LE(offset + 26);
+    const extraLen = data.readUInt16LE(offset + 28);
+    const name = data.toString("utf8", offset + 30, offset + 30 + nameLen);
+    const dataOffset = offset + 30 + nameLen + extraLen;
+
+    files.push({
+      name,
+      compMethod,
+      compSize,
+      uncompSize,
+      dataOffset,
+      data: data.slice(dataOffset, dataOffset + compSize)
+    });
+
+    offset = dataOffset + compSize;
+  }
+
+  return files;
+}
+
+async function extractFileFromZip(buffer, fileName) {
+  const files = parseZipLocalFileHeaders(buffer);
+  const entry = files.find(f => f.name === fileName || f.name.endsWith("/" + fileName));
+  if (!entry) return null;
+
+  if (entry.compMethod === 0) {
+    return entry.data;
+  }
+
+  if (entry.compMethod === 8) {
+    const zlib = require("zlib");
+    return new Promise((resolve, reject) => {
+      zlib.inflateRaw(entry.data, (err, result) => {
+        if (err) reject(err);
+        else resolve(result);
+      });
+    });
+  }
+
+  return null;
+}
 const RELEASES_TTL = 5 * 60 * 1000;
 
 async function getVisitorStats() {
@@ -360,7 +415,17 @@ module.exports = async function handler(req, res) {
       try {
         var artifactsData = await githubFetch(`/repos/${ciRepository}/actions/runs/${artifactRunId}/artifacts`);
         var artifacts = Array.isArray(artifactsData.artifacts) ? artifactsData.artifacts : [];
+        
+        // Exact match first (IPA, Xcode project)
         var artifact = artifacts.find(function(a) { return a.name === artifactName; });
+        var fileNameInZip = artifactName;
+        
+        // If not found and it's a screenshot request, look in smoke-test-screenshots
+        if (!artifact && /^screen-\d+$/.test(artifactName)) {
+          artifact = artifacts.find(function(a) { return a.name === "smoke-test-screenshots"; });
+          fileNameInZip = artifactName + ".png";
+        }
+        
         if (!artifact) {
           sendJson(req, res, 404, { ok: false, error: "Artifact not found" });
           return;
@@ -371,12 +436,28 @@ module.exports = async function handler(req, res) {
           redirect: "manual"
         });
         if (resp.status >= 300 && resp.status < 400 && resp.headers.get("location")) {
-          res.writeHead(302, { "Location": resp.headers.get("location") });
-          res.end();
-        } else {
-          var text = await resp.text();
-          sendJson(req, res, 502, { ok: false, error: "No redirect from GitHub", body: text.slice(0, 500) });
+          var zipResp = await fetch(resp.headers.get("location"), {
+            headers: { "Authorization": "Bearer " + process.env.GITHUB_TOKEN, "User-Agent": "zeywin-android-builder-api" }
+          });
+          if (!zipResp.ok) {
+            sendJson(req, res, 502, { ok: false, error: "Failed to download artifact zip" });
+            return;
+          }
+          var arrayBuffer = await zipResp.arrayBuffer();
+          var buffer = Buffer.from(arrayBuffer);
+          var fileData = await extractFileFromZip(buffer, fileNameInZip);
+          if (!fileData) {
+            sendJson(req, res, 404, { ok: false, error: "File not found in artifact" });
+            return;
+          }
+          setCors(req, res);
+          res.setHeader("Content-Type", "image/png");
+          res.setHeader("Cache-Control", "public, max-age=3600");
+          res.statusCode = 200;
+          res.end(fileData);
+          return;
         }
+        sendJson(req, res, 502, { ok: false, error: "No redirect from GitHub" });
       } catch (e) {
         sendJson(req, res, 500, { ok: false, error: e.message });
       }
