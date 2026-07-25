@@ -39,17 +39,28 @@ async function handleDelete(req, res) {
     throw error;
   }
 
+  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+
+  // Actually DELETE the workflow run from GitHub Actions (permanent deletion)
   if (runId) {
     try {
-      const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-      await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}/cancel`, {
-        method: "POST"
+      await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}`, {
+        method: "DELETE"
       });
-    } catch (cancelErr) {
-      console.error("Failed to cancel workflow run:", cancelErr && cancelErr.message);
+    } catch (deleteErr) {
+      console.error("Failed to delete workflow run:", deleteErr && deleteErr.message);
+      // Fallback: try to cancel if delete fails (e.g., run still in progress)
+      try {
+        await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}/cancel`, {
+          method: "POST"
+        });
+      } catch (cancelErr) {
+        console.error("Failed to cancel workflow run:", cancelErr && cancelErr.message);
+      }
     }
   }
 
+  // Also add to hidden list for immediate UI filtering
   await addHiddenBuild({ requestId, runId });
 
   sendJson(req, res, 200, {
