@@ -416,10 +416,10 @@ async function dispatchWorkflow(inputs, mode, platform) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
   const isKupertino = String(platform || "").toLowerCase() === "kupertino";
-  const ciWorkflow = isKupertino ? "318810494" : (isAdmin ? "build-apk.yml" : "build-site.yml");
+  const ciWorkflow = isKupertino ? "build-kupertino.yml" : (isAdmin ? "build-apk.yml" : "build-site.yml");
   const ciRef = process.env.CI_REF || "main";
 
-  await githubFetch(`/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/dispatches`, {
+  await githubFetch(`/repos/${ciRepository}/actions/workflows/${ciWorkflow}/dispatches`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ref: ciRef, inputs })
@@ -439,7 +439,7 @@ async function findWorkflowRun({ requestId, createdAfter, mode, platform }) {
   const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
   const isAdmin = String(mode || "").toLowerCase() === "admin";
   const isKupertino = String(platform || "").toLowerCase() === "kupertino";
-  const ciWorkflow = isKupertino ? "318810494" : (isAdmin ? "build-apk.yml" : "build-site.yml");
+  const ciWorkflow = isKupertino ? "build-kupertino.yml" : (isAdmin ? "build-apk.yml" : "build-site.yml");
   const createdAt = new Date(createdAfter.getTime() - 15_000);
 
   for (let attempt = 0; attempt < 8; attempt += 1) {
