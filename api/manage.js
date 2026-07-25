@@ -1,15 +1,14 @@
 const {
-  errorPayload,
-  githubFetch,
-  handleOptions,
-  readJson,
-  requireOperator,
-  safeString,
-  sendJson,
-  addHiddenBuild
-} = require("../lib/shared");
-
-const { loadDb, saveDb } = require("./configs");
+   errorPayload,
+   githubFetch,
+   handleOptions,
+   readJson,
+   requireOperator,
+   safeString,
+   sendJson,
+   addHiddenBuild
+ } = require("../lib/shared");
+ const { loadDb, saveDb } = require("./configs");
 
 async function handleCancel(req, res) {
   const body = await readJson(req, 32_000);
@@ -41,42 +40,33 @@ async function handleDelete(req, res) {
     throw error;
   }
 
-  const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-
-  // Actually DELETE the workflow run from GitHub Actions (permanent deletion)
   if (runId) {
     try {
-      await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}`, {
-        method: "DELETE"
+      const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
+      await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}/cancel`, {
+        method: "POST"
       });
-    } catch (deleteErr) {
-      console.error("Failed to delete workflow run:", deleteErr && deleteErr.message);
-      // Fallback: try to cancel if delete fails (e.g., run still in progress)
-      try {
-        await githubFetch(`/repos/${ciRepository}/actions/runs/${runId}/cancel`, {
-          method: "POST"
-        });
-      } catch (cancelErr) {
-        console.error("Failed to cancel workflow run:", cancelErr && cancelErr.message);
-      }
+    } catch (cancelErr) {
+      console.error("Failed to cancel workflow run:", cancelErr && cancelErr.message);
     }
   }
 
-  // Also add to hidden list for immediate UI filtering
   await addHiddenBuild({ requestId, runId });
 
-  // Permanently remove the build entry from db.builds in db.json
-  if (runId) {
-    try {
-      const { db, sha } = await loadDb();
-      const before = db.builds.length;
+  try {
+    const { db, sha } = await loadDb();
+    const before = db.builds.length;
+    if (runId) {
       db.builds = db.builds.filter((b) => String(b.run_id) !== runId);
-      if (db.builds.length !== before) {
-        await saveDb(db, sha);
-      }
-    } catch (dbErr) {
-      console.error("Failed to remove build from db.builds:", dbErr && dbErr.message);
     }
+    if (requestId) {
+      db.builds = db.builds.filter((b) => b.request_id !== requestId);
+    }
+    if (db.builds.length < before) {
+      await saveDb(db, sha);
+    }
+  } catch (dbErr) {
+    console.error("Failed to delete build from db.json:", dbErr && dbErr.message);
   }
 
   sendJson(req, res, 200, {

@@ -627,7 +627,7 @@ module.exports = async function handler(req, res) {
     const ciWorkflowForMode = isKupertino
       ? "build-kupertino.yml"
       : (String(buildMode || "").toLowerCase() === "admin" ? "build-apk.yml" : "build-site.yml");
-    const kupertinoPlatform = payload.platform === "kupertino" ? "kupertino" : "";
+    const kupertinoPlatform = String(payload.platform || "").toLowerCase() === "kupertino" ? "kupertino" : "";
     const dispatch = await dispatchWorkflow(inputs, buildMode, kupertinoPlatform);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode, platform: kupertinoPlatform });
 
