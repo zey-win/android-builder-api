@@ -9,6 +9,8 @@ const {
   addHiddenBuild
 } = require("../lib/shared");
 
+const { loadDb, saveDb } = require("./configs");
+
 async function handleCancel(req, res) {
   const body = await readJson(req, 32_000);
   const runId = safeString(body.run_id || body.runId);
@@ -62,6 +64,20 @@ async function handleDelete(req, res) {
 
   // Also add to hidden list for immediate UI filtering
   await addHiddenBuild({ requestId, runId });
+
+  // Permanently remove the build entry from db.builds in db.json
+  if (runId) {
+    try {
+      const { db, sha } = await loadDb();
+      const before = db.builds.length;
+      db.builds = db.builds.filter((b) => String(b.run_id) !== runId);
+      if (db.builds.length !== before) {
+        await saveDb(db, sha);
+      }
+    } catch (dbErr) {
+      console.error("Failed to remove build from db.builds:", dbErr && dbErr.message);
+    }
+  }
 
   sendJson(req, res, 200, {
     ok: true,
