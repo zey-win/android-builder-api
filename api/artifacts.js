@@ -3,7 +3,8 @@ const {
   githubFetch,
   handleOptions,
   safeString,
-  sendJson
+  sendJson,
+  setCors
 } = require("../lib/shared");
 
 const { kv } = require("@vercel/kv");
@@ -129,6 +130,7 @@ module.exports = async function handler(req, res) {
         return;
       }
 
+      setCors(req, res);
       res.setHeader("Content-Type", "image/png");
       res.setHeader("Cache-Control", "public, max-age=3600");
       res.statusCode = 200;
