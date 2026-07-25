@@ -82,7 +82,16 @@ module.exports = async function handler(req, res) {
     const artifacts = Array.isArray(artifactsData.artifacts)
       ? artifactsData.artifacts
       : [];
-    const artifact = artifacts.find(a => a.name === name);
+    
+    // First try exact match (for IPA, Xcode project artifacts)
+    let artifact = artifacts.find(a => a.name === name);
+    let fileNameInZip = name;
+    
+    // If not found, check if it's a screenshot request and look for smoke-test-screenshots artifact
+    if (!artifact && /^screen-\d+$/.test(name)) {
+      artifact = artifacts.find(a => a.name === "smoke-test-screenshots");
+      fileNameInZip = name + ".png";
+    }
 
     if (!artifact) {
       sendJson(req, res, 404, { ok: false, error: "Artifact not found" });
@@ -113,7 +122,7 @@ module.exports = async function handler(req, res) {
 
       const arrayBuffer = await zipResp.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const fileData = await extractFileFromZip(buffer, name);
+      const fileData = await extractFileFromZip(buffer, fileNameInZip);
 
       if (!fileData) {
         sendJson(req, res, 404, { ok: false, error: "File not found in artifact" });
