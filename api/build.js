@@ -425,12 +425,11 @@ async function dispatchWorkflow(inputs, mode, platform) {
     body: JSON.stringify({ ref: ciRef, inputs })
   });
 
-  const workflowName = isKupertino ? "build-kupertino.yml" : (isAdmin ? "build-apk.yml" : "build-site.yml");
   return {
     repository: ciRepository,
-    workflow: workflowName,
+    workflow: ciWorkflow,
     ref: ciRef,
-    workflowUrl: `https://github.com/${ciRepository}/actions/workflows/${workflowName}`,
+    workflowUrl: `https://github.com/${ciRepository}/actions/workflows/${ciWorkflow}`,
     actionsUrl: `https://github.com/${ciRepository}/actions`
   };
 }
@@ -625,10 +624,7 @@ module.exports = async function handler(req, res) {
     // eslint-disable-next-line no-console
     console.log(`[build] icon source: raw=${iconRaw ? "yes" : "no"}, iconPngPath=${iconPngPath || "(none)"}, dispatch icon_png_path=${inputs.icon_png_path || "(empty)"}`);
     const isKupertino = String(payload.platform || "").toLowerCase() === "kupertino";
-    const ciWorkflowForMode = isKupertino
-      ? "build-kupertino.yml"
-      : (String(buildMode || "").toLowerCase() === "admin" ? "build-apk.yml" : "build-site.yml");
-    const kupertinoPlatform = String(payload.platform || "").toLowerCase() === "kupertino" ? "kupertino" : "";
+    const kupertinoPlatform = isKupertino ? "kupertino" : "";
     const dispatch = await dispatchWorkflow(inputs, buildMode, kupertinoPlatform);
     const run = await findWorkflowRun({ requestId, createdAfter: dispatchStartedAt, mode: buildMode, platform: kupertinoPlatform });
 
