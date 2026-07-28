@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-22T08:25:39.676Z",
+  "updatedAt": "2026-07-28T09:38:58.648Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -3013,6 +3013,28 @@
       "version_code": "1",
       "aab_version_name": "1",
       "aab_version_code": "1",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": ""
+    },
+    "30347460769": {
+      "builder_request_id": "builder-ms4grc8d",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.test.verify",
+      "app_name": "Verify Test",
+      "icon_png_path": "Assets/ZeyWin/IconOverride/android-icon.png",
+      "zeywin_sdk_version": "",
+      "zeywin_api_key": "zw_test",
+      "version_mode": "auto_next",
+      "version_name": "",
+      "version_code": "",
+      "aab_version_name": "",
+      "aab_version_code": "",
       "build_format": "apk",
       "fast_build": "true",
       "signing_profile": "playmax",
