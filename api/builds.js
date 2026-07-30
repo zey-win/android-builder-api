@@ -17,14 +17,17 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Find the run by ID from GitHub Actions
+    // Find the run by ID from GitHub Actions - check multiple workflows
     const ciRepository = process.env.CI_REPOSITORY || "zey-win/ci-cd";
-    const ciWorkflow = process.env.CI_WORKFLOW || "build-apk.yml";
-    const data = await githubFetch(
-      `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(ciWorkflow)}/runs?event=workflow_dispatch&per_page=100`
-    );
-
-    const run = (data.workflow_runs || []).find((item) => String(item.id) === runId);
+    const workflows = ["build-apk.yml", "build-kupertino.yml"];
+    let run = null;
+    for (const wf of workflows) {
+      const data = await githubFetch(
+        `/repos/${ciRepository}/actions/workflows/${encodeURIComponent(wf)}/runs?event=workflow_dispatch&per_page=100`
+      );
+      run = (data.workflow_runs || []).find((item) => String(item.id) === runId);
+      if (run) break;
+    }
     if (!run) {
       sendJson(req, res, 404, { ok: false, error: "Run not found" });
       return;
