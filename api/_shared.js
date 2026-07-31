@@ -351,7 +351,8 @@ async function loadHiddenBuilds() {
       const parsed = JSON.parse(text);
       return {
         hiddenRequestIds: Array.isArray(parsed.hiddenRequestIds) ? parsed.hiddenRequestIds : [],
-        hiddenRunIds: Array.isArray(parsed.hiddenRunIds) ? parsed.hiddenRunIds.map(String) : []
+        hiddenRunIds: Array.isArray(parsed.hiddenRunIds) ? parsed.hiddenRunIds.map(String) : [],
+        pinnedRunIds: Array.isArray(parsed.pinnedRunIds) ? parsed.pinnedRunIds.map(String) : []
       };
     }
   } catch (err) {
@@ -360,7 +361,37 @@ async function loadHiddenBuilds() {
       console.error("Failed to load hidden builds", err.message);
     }
   }
-  return { hiddenRequestIds: [], hiddenRunIds: [] };
+  return { hiddenRequestIds: [], hiddenRunIds: [], pinnedRunIds: [] };
+}
+
+async function saveHiddenBuilds(hidden) {
+  const repo = HIDDEN_FILE_REPO;
+  const path = HIDDEN_FILE_PATH;
+  let sha;
+  try {
+    const existing = await githubFetch(`/repos/${repo}/contents/${path}`);
+    sha = existing.sha;
+  } catch (e) {
+    if (e.statusCode !== 404) throw e;
+  }
+  const contentObj = {
+    hiddenRequestIds: hidden.hiddenRequestIds,
+    hiddenRunIds: hidden.hiddenRunIds,
+    pinnedRunIds: hidden.pinnedRunIds,
+    updatedAt: new Date().toISOString()
+  };
+  const content = Buffer.from(JSON.stringify(contentObj, null, 2)).toString("base64");
+  const body = {
+    message: "console: update hidden builds",
+    content,
+    ...(sha ? { sha } : {})
+  };
+  await githubFetch(`/repos/${repo}/contents/${path}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body)
+  });
+  return hidden;
 }
 
 async function addHiddenBuild({ requestId, runId } = {}) {
@@ -383,37 +414,22 @@ async function addHiddenBuild({ requestId, runId } = {}) {
     return hidden;
   }
 
-  const repo = HIDDEN_FILE_REPO;
-  const path = HIDDEN_FILE_PATH;
+  return await saveHiddenBuilds(hidden);
+}
 
-  let sha;
-  try {
-    const existing = await githubFetch(`/repos/${repo}/contents/${path}`);
-    sha = existing.sha;
-  } catch (e) {
-    if (e.statusCode !== 404) throw e;
-  }
+async function pinRun(runId) {
+  const hidden = await loadHiddenBuilds();
+  const rid = String(runId);
+  if (hidden.pinnedRunIds.includes(rid)) return hidden;
+  hidden.pinnedRunIds.push(rid);
+  return await saveHiddenBuilds(hidden);
+}
 
-  const contentObj = {
-    hiddenRequestIds: hidden.hiddenRequestIds,
-    hiddenRunIds: hidden.hiddenRunIds,
-    updatedAt: new Date().toISOString()
-  };
-  const content = Buffer.from(JSON.stringify(contentObj, null, 2)).toString("base64");
-
-  const body = {
-    message: `console: hide build ${req || rid}`,
-    content,
-    ...(sha ? { sha } : {})
-  };
-
-  await githubFetch(`/repos/${repo}/contents/${path}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body)
-  });
-
-  return hidden;
+async function unpinRun(runId) {
+  const hidden = await loadHiddenBuilds();
+  const rid = String(runId);
+  hidden.pinnedRunIds = hidden.pinnedRunIds.filter(id => id !== rid);
+  return await saveHiddenBuilds(hidden);
 }
 
 module.exports = {
@@ -435,6 +451,9 @@ module.exports = {
   setCors,
   loadHiddenBuilds,
   addHiddenBuild,
+  pinRun,
+  unpinRun,
+  saveHiddenBuilds,
   loadAllBuildInputs,
   saveBuildInputs,
   sanitizeInputs

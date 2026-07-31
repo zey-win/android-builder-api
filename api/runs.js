@@ -284,6 +284,7 @@ async function listRecentRuns(workflowFileName) {
 
   const hidden = await loadHiddenBuilds();
   const releasesMap = await getReleasesVersionMap();
+  const pinnedSet = new Set(hidden.pinnedRunIds || []);
 
   const filtered = (data.workflow_runs || [])
     .filter((run) => {
@@ -291,6 +292,14 @@ async function listRecentRuns(workflowFileName) {
       const byRequest = hidden.hiddenRequestIds.some((req) => req && title.includes(req));
       const byRun = hidden.hiddenRunIds.includes(String(run.id));
       return !byRequest && !byRun;
+    })
+    .sort((a, b) => {
+      const aPinned = pinnedSet.has(String(a.id)) ? 1 : 0;
+      const bPinned = pinnedSet.has(String(b.id)) ? 1 : 0;
+      if (aPinned !== bPinned) return bPinned - aPinned;
+      const ta = new Date(a.created_at || 0).getTime();
+      const tb = new Date(b.created_at || 0).getTime();
+      return tb - ta;
     })
     .slice(0, 50);
 
@@ -406,6 +415,7 @@ module.exports = async function handler(req, res) {
     
     // Handle artifact download proxy
     if (pathName === "/api/artifact") {
+      setCors(req, res);
       var artifactRunId = safeString(req.query?.run_id);
       var artifactName = safeString(req.query?.name);
       if (!artifactRunId || !artifactName) {

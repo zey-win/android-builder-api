@@ -6,7 +6,10 @@ const {
    requireOperator,
    safeString,
    sendJson,
-   addHiddenBuild
+   addHiddenBuild,
+   pinRun,
+   unpinRun,
+   loadHiddenBuilds
  } = require("../lib/shared");
  const { loadDb, saveDb } = require("./configs");
 
@@ -77,6 +80,30 @@ async function handleDelete(req, res) {
   });
 }
 
+async function handlePinRun(req, res) {
+  const body = await readJson(req, 32_000);
+  const runId = safeString(body.runId || body.run_id);
+  if (!/^\d+$/.test(runId)) {
+    const error = new Error("runId is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  await pinRun(runId);
+  sendJson(req, res, 200, { ok: true, runId, pinned: true });
+}
+
+async function handleUnpinRun(req, res) {
+  const body = await readJson(req, 32_000);
+  const runId = safeString(body.runId || body.run_id);
+  if (!/^\d+$/.test(runId)) {
+    const error = new Error("runId is required.");
+    error.statusCode = 400;
+    throw error;
+  }
+  await unpinRun(runId);
+  sendJson(req, res, 200, { ok: true, runId, pinned: false });
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -94,6 +121,12 @@ module.exports = async function handler(req, res) {
     }
     if (path.endsWith("/delete")) {
       return await handleDelete(req, res);
+    }
+    if (path.endsWith("/pin-run")) {
+      return await handlePinRun(req, res);
+    }
+    if (path.endsWith("/unpin-run")) {
+      return await handleUnpinRun(req, res);
     }
 
     sendJson(req, res, 404, { ok: false, error: "Unknown manage action." });

@@ -4,7 +4,12 @@ const {
   handleOptions,
   readJson,
   safeString,
-  sendJson
+  sendJson,
+  loadHiddenConfigs,
+  addHiddenConfig,
+  removeHiddenConfig,
+  addHiddenRepo,
+  removeHiddenRepo
 } = require("../lib/shared");
 
 const DB_REPO = process.env.CONFIG_REPO || "zey-win/zey-win.github.io";
@@ -85,7 +90,9 @@ module.exports = async function handler(req, res) {
       const section = safeString(url.searchParams.get("section"));
       const packageName = safeString(url.searchParams.get("package_name"));
       if (section === "games") {
-        sendJson(req, res, 200, { ok: true, games: db.games });
+        const hidden = await loadHiddenConfigs();
+        const visibleGames = db.games.filter(g => !hidden.hiddenConfigIds.includes(g.id));
+        sendJson(req, res, 200, { ok: true, games: visibleGames, hiddenRepoIds: hidden.hiddenRepoIds });
         return;
       }
       if (section === "icons") {
@@ -103,11 +110,13 @@ module.exports = async function handler(req, res) {
         return;
       }
       // Legacy configs format: merge games+icons
+      const hidden = await loadHiddenConfigs();
       const configs = db.games.map((g) => {
         const icon = db.icons.find((i) => i.package_name === g.package_name);
         return { ...g, icon_data_url: icon ? icon.icon_data_url : "" };
-      });
-      sendJson(req, res, 200, { ok: true, configs, deleted: db.builds || [], games: db.games, icons: db.icons, builds: db.builds });
+      }).filter(g => g.id && !hidden.hiddenConfigIds.includes(g.id));
+      const visibleGames = db.games.filter(g => !hidden.hiddenConfigIds.includes(g.id));
+      sendJson(req, res, 200, { ok: true, configs, deleted: db.builds || [], games: visibleGames, icons: db.icons, builds: db.builds, hiddenRepoIds: hidden.hiddenRepoIds });
       return;
     }
 
@@ -183,6 +192,23 @@ module.exports = async function handler(req, res) {
         const idx = db.builds.findIndex((b) => b.run_id === body.build.run_id);
         if (idx >= 0) db.builds[idx] = { ...db.builds[idx], ...body.build, updated_at: new Date().toISOString() };
         else db.builds.push({ ...body.build, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
+      }
+
+      // Delete single config (frontend sends { id })
+      if (body.id && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds) {
+        const id = safeString(body.id);
+        const game = db.games.find((g) => g.id === id);
+        db.games = db.games.filter((g) => g.id !== id);
+        if (game && game.package_name) {
+          db.icons = db.icons.filter((i) => i.package_name !== game.package_name);
+        }
+        await addHiddenConfig(id);
+        if (game && game.game_repository) {
+          await addHiddenRepo(game.game_repository);
+        }
+        await saveDb(db, sha);
+        sendJson(req, res, 200, { ok: true, ...db });
+        return;
       }
 
       // Full replace of sections
