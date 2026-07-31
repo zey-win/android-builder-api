@@ -194,6 +194,23 @@ module.exports = async function handler(req, res) {
         else db.builds.push({ ...body.build, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       }
 
+      // Permanently delete repo from dropdown (frontend sends { deleteRepo })
+      if (body.deleteRepo && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds && !body.id && !body.hiddenRepo && !body.unhiddenRepo) {
+        const repo = safeString(body.deleteRepo);
+        await addHiddenRepo(repo);
+        // Также удаляем все конфиги с этим репозиторием
+        const gamesToRemove = db.games.filter(g => g.game_repository === repo);
+        for (const g of gamesToRemove) {
+          db.games = db.games.filter(gg => gg.id !== g.id);
+          if (g.package_name) {
+            db.icons = db.icons.filter(i => i.package_name !== g.package_name);
+          }
+        }
+        await saveDb(db, sha);
+        sendJson(req, res, 200, { ok: true, deleteRepo: repo });
+        return;
+      }
+
       // Hide repo from dropdown (frontend sends { hiddenRepo })
       if (body.hiddenRepo && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds && !body.id && !body.unhiddenRepo) {
         const repo = safeString(body.hiddenRepo);
