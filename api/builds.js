@@ -7,6 +7,29 @@ const {
   sendJson
 } = require("./_shared");
 
+function parseRunTitle(raw) {
+  const t = (raw || "").trim();
+  const isKupertino = /^kupertino\s/i.test(t);
+  const body = t.replace(/^Android:\s*/i, "").replace(/^kupertino\s*/i, "").trim();
+  const parts = body.split("/").map((p) => p.trim()).filter(Boolean);
+
+  let appName = parts[0] || "";
+  const suffix = appName.match(/(apk_aab|apk|aab|ipa)$/i);
+  if (suffix) appName = appName.replace(/(apk_aab|apk|aab|ipa)$/i, "").trim();
+
+  let packageName = parts[1] || "";
+  packageName = packageName.replace(/\s+builder-[\w]+$/, "").replace(/\s+\d+$/, "").trim();
+  if (!/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(packageName)) packageName = "";
+
+  let buildFormat = isKupertino ? "ipa" : suffix ? suffix[1].toLowerCase() : "apk";
+  for (const part of parts.slice(1)) {
+    const f = part.match(/^(apk_aab|apk|aab|ipa|xcarchive)$/i);
+    if (f) { buildFormat = f[1].toLowerCase(); break; }
+  }
+
+  return { appName: appName || "Build", packageName, buildFormat };
+}
+
 module.exports = async function handler(req, res) {
   if (handleOptions(req, res)) return;
 
@@ -33,12 +56,12 @@ module.exports = async function handler(req, res) {
       return;
     }
 
-    // Parse displayTitle: "Android: AppName / package.name / format / runId"
+    // Parse displayTitle for all title shapes:
+    //   "Android: AppName / package.name / format / builder-xxx"
+    //   "AppNameapk_aab/ package.name runId builder-xxx"
+    //   "kupertino AppName / package.name / runId"
     const raw = `${run.display_title || ""} ${run.name || ""}`;
-    const parts = raw.replace(/^Android:\s*/i, "").split(" / ").map((p) => p.trim());
-    const appName = parts[0] || "";
-    const packageName = parts[1] || "";
-    const buildFormat = parts[2] || "apk";
+    const parsed = parseRunTitle(raw);
 
     // Load persisted build inputs (stored by api/build.js when the build was dispatched)
     const allInputs = await loadAllBuildInputs();
@@ -48,9 +71,9 @@ module.exports = async function handler(req, res) {
     const config = {
       game_repository: safeString(inputs.game_repository || "zey-win/plinko"),
       game_ref: safeString(inputs.game_ref || "main"),
-      package_name: safeString(inputs.package_name || packageName),
-      app_name: safeString(inputs.app_name || appName),
-      build_format: safeString(inputs.build_format || buildFormat),
+      package_name: safeString(inputs.package_name || parsed.packageName),
+      app_name: safeString(inputs.app_name || parsed.appName),
+      build_format: safeString(inputs.build_format || parsed.buildFormat),
       version_mode: safeString(inputs.version_mode || "auto_next"),
       version_name: safeString(inputs.version_name || ""),
       version_code: safeString(inputs.version_code || ""),
