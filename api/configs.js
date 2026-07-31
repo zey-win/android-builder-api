@@ -194,6 +194,22 @@ module.exports = async function handler(req, res) {
         else db.builds.push({ ...body.build, created_at: new Date().toISOString(), updated_at: new Date().toISOString() });
       }
 
+      // Hide repo from dropdown (frontend sends { hiddenRepo })
+      if (body.hiddenRepo && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds && !body.id && !body.unhiddenRepo) {
+        const repo = safeString(body.hiddenRepo);
+        await addHiddenRepo(repo);
+        sendJson(req, res, 200, { ok: true, hiddenRepo: repo });
+        return;
+      }
+
+      // Unhide repo in dropdown (frontend sends { unhiddenRepo })
+      if (body.unhiddenRepo && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds && !body.id && !body.hiddenRepo) {
+        const repo = safeString(body.unhiddenRepo);
+        await removeHiddenRepo(repo);
+        sendJson(req, res, 200, { ok: true, unhiddenRepo: repo });
+        return;
+      }
+
       // Delete single config (frontend sends { id })
       if (body.id && !body.config && !body.game && !body.build && !body.icons && !body.games && !body.builds) {
         const id = safeString(body.id);
