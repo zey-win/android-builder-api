@@ -465,6 +465,37 @@ module.exports = async function handler(req, res) {
       return;
     }
 
+    // Handle pin-run endpoint (toggle pin status for a build)
+    if (pathName === "/api/pin-run") {
+      requireOperator(req);
+      if (req.method !== "POST") {
+        sendJson(req, res, 405, { ok: false, error: "Method not allowed" });
+        return;
+      }
+      const body = await readJson(req, 100_000);
+      const runId = safeString(body?.runId);
+      const action = safeString(body?.action);
+      if (!runId || !action) {
+        sendJson(req, res, 400, { ok: false, error: "runId and action required" });
+        return;
+      }
+      const PINNED_KEY = "pinned-runs";
+      let pinned = [];
+      try { pinned = JSON.parse(await kv.get(PINNED_KEY)) || []; } catch {}
+      if (!Array.isArray(pinned)) pinned = [];
+      if (action === "pin" && !pinned.includes(runId)) {
+        pinned.push(runId);
+      } else if (action === "unpin") {
+        pinned = pinned.filter(id => String(id) !== String(runId));
+      } else {
+        sendJson(req, res, 400, { ok: false, error: "invalid action" });
+        return;
+      }
+      await kv.set(PINNED_KEY, pinned);
+      sendJson(req, res, 200, { ok: true, pinned });
+      return;
+    }
+
     // Handle runs endpoints
     requireOperator(req);
 
@@ -493,7 +524,18 @@ module.exports = async function handler(req, res) {
         const runs = await listRecentRuns(wf);
         allRuns.push(...runs);
       }
-      allRuns.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      const PINNED_KEY = "pinned-runs";
+      let pinned = [];
+      try { pinned = JSON.parse(await kv.get(PINNED_KEY)) || []; } catch {}
+      if (!Array.isArray(pinned)) pinned = [];
+      const pinnedSet = new Set(pinned.map(String));
+      allRuns.sort((a, b) => {
+        const aPinned = pinnedSet.has(String(a.id));
+        const bPinned = pinnedSet.has(String(b.id));
+        if (aPinned && !bPinned) return -1;
+        if (!aPinned && bPinned) return 1;
+        return new Date(b.createdAt) - new Date(a.createdAt);
+      });
       sendJson(req, res, 200, { ok: true, runs: allRuns.slice(0, 50) });
       return;
     }
