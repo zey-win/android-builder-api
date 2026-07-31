@@ -60,7 +60,7 @@ module.exports = async function handler(req, res) {
     //   "Android: AppName / package.name / format / builder-xxx"
     //   "AppNameapk_aab/ package.name runId builder-xxx"
     //   "kupertino AppName / package.name / runId"
-    const raw = `${run.display_title || ""} ${run.name || ""}`;
+    const raw = run.display_title || run.name || "";
     const parsed = parseRunTitle(raw);
 
     // Load persisted build inputs (stored by api/build.js when the build was dispatched)
