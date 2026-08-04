@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-07-31T12:46:43.312Z",
+  "updatedAt": "2026-08-04T13:18:21.431Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -3130,6 +3130,28 @@
       "admob_android_banner_id": "ca-app-pub-1585565865476548/1949732876",
       "admob_android_interstitial_id": "ca-app-pub-1585565865476548/3620083367",
       "admob_android_rewarded_id": "ca-app-pub-1585565865476548/8194496114"
+    },
+    "30913140799": {
+      "builder_request_id": "builder-mseoocls",
+      "game_repository": "zey-win/plinko",
+      "game_ref": "main",
+      "package_name": "com.game.roulette.online.casino",
+      "app_name": "Roulette-Online",
+      "icon_png_path": "https://raw.githubusercontent.com/zey-win/zey-win.github.io/main/repo-icons/com.socialapps.plinko.png",
+      "zeywin_sdk_version": "v3.9.46",
+      "zeywin_api_key": "",
+      "version_mode": "auto_next",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "1",
+      "aab_version_code": "1",
+      "build_format": "apk_aab",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "",
+      "admob_android_banner_id": "",
+      "admob_android_interstitial_id": "",
+      "admob_android_rewarded_id": ""
     }
   }
 }
