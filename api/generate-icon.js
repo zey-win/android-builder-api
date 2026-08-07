@@ -18,41 +18,43 @@ const PROMPTS = {
   "zey-win/SlotSpot": "Slot machine game app icon, classic slot machine with lucky 7s, cherries, golden bells, BAR symbols, bright neon casino style, 1024x1024"
 };
 
+const OPENAI_MODELS = ["gpt-image-2", "gpt-image-1"];
+
 async function generateImage(prompt) {
   const keys = [process.env.OPENAI_API_KEY_1, process.env.OPENAI_API_KEY_2].filter(Boolean);
   let lastError = null;
 
-  for (const key of keys) {
-    try {
-      const response = await fetch("https://api.openai.com/v1/images/generations", {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${key}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          model: "dall-e-3",
-          prompt: prompt,
-          n: 1,
-          size: "1024x1024",
-          response_format: "b64_json"
-        })
-      });
+  for (const model of OPENAI_MODELS) {
+    for (const key of keys) {
+      try {
+        const response = await fetch("https://api.openai.com/v1/images/generations", {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${key}`,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: model,
+            prompt: prompt,
+            n: 1,
+            size: "1024x1024"
+          })
+        });
 
-      if (!response.ok) {
-        const errText = await response.text().catch(() => "");
-        lastError = `OpenAI error ${response.status}: ${errText}`;
-        if (response.status !== 429 && response.status !== 500) break;
-        continue;
-      }
+        if (!response.ok) {
+          const errText = await response.text().catch(() => "");
+          lastError = `OpenAI ${model} error ${response.status}: ${errText}`;
+          continue;
+        }
 
-      const data = await response.json();
-      if (data.data && data.data[0] && data.data[0].b64_json) {
-        return `data:image/png;base64,${data.data[0].b64_json}`;
+        const data = await response.json();
+        if (data.data && data.data[0] && data.data[0].b64_json) {
+          return `data:image/png;base64,${data.data[0].b64_json}`;
+        }
+        lastError = `Invalid response format from ${model}`;
+      } catch (err) {
+        lastError = err.message;
       }
-      lastError = "Invalid response format from OpenAI";
-    } catch (err) {
-      lastError = err.message;
     }
   }
 
