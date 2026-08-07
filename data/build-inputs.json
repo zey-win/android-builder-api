@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-08-04T13:18:21.431Z",
+  "updatedAt": "2026-08-07T14:11:30.390Z",
   "inputs": {
     "29426010187": {
       "builder_request_id": "builder-mrm7ggbm",
@@ -3152,6 +3152,28 @@
       "admob_android_banner_id": "",
       "admob_android_interstitial_id": "",
       "admob_android_rewarded_id": ""
+    },
+    "31186329916": {
+      "builder_request_id": "builder-msj0w5wu",
+      "game_repository": "zey-win/LuckyFruit_Clear",
+      "game_ref": "main",
+      "package_name": "com.test.integration",
+      "app_name": "LuckyFruit Clear",
+      "icon_png_path": "builds/icons/com.test.integration.png",
+      "zeywin_sdk_version": "v3.9.49",
+      "zeywin_api_key": "zw_98fd19c0c48b388d726ea55949e206567d19f54e9d838262",
+      "version_mode": "auto_next",
+      "version_name": "1",
+      "version_code": "1",
+      "aab_version_name": "1",
+      "aab_version_code": "1",
+      "build_format": "apk",
+      "fast_build": "true",
+      "signing_profile": "playmax",
+      "admob_android_app_id": "ca-app-pub-3940256099942544~3347511713",
+      "admob_android_banner_id": "ca-app-pub-3940256099942544/6300978111",
+      "admob_android_interstitial_id": "ca-app-pub-3940256099942544/1033173712",
+      "admob_android_rewarded_id": "ca-app-pub-3940256099942544/5224354917"
     }
   }
 }
